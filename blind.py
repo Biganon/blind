@@ -1,6 +1,6 @@
+import os
 import pyglet as pg
 import sys
-from itertools import cycle
 
 FONT1 = "monospace"
 STEP_IDLE = 0
@@ -9,22 +9,35 @@ STEP_ANSWERING = 2
 STEP_REVEALED = 3
 TRACKS_CENTER = 500
 TEAMS_CENTER = 200
+FADEOUT = True
+FADEOUT_INTERVAL = 0.1
 
-def reset():
-    global step
+def make_quieter(dt, fadeout=True):
     global player
     global answering_team    
     global artist_found
     global title_found
+    global step
 
-    step = STEP_IDLE
+    if player.volume > 0.05 and fadeout:
+        player.volume -= 0.05
+        return
+    if player.volume > 0.01 and fadeout:
+        player.volume -= 0.01
+        return
+
     player.pause()
     player = None
+    step = STEP_IDLE
+    pg.clock.unschedule(make_quieter)
     for team in teams:
         teams[team].can_buzz = True
     answering_team = None
     artist_found = False
     title_found = False
+
+def reset(fadeout=True):
+    pg.clock.schedule_interval(make_quieter, FADEOUT_INTERVAL, fadeout=fadeout)
 
 class ButtonCheckWindow(pg.window.Window):
     def __init__(self):
@@ -42,8 +55,6 @@ class ButtonCheckWindow(pg.window.Window):
 class ControlWindow(pg.window.Window):
     def __init__(self):
         super(ControlWindow, self).__init__(800, 600, caption="Blind - Contrôleur")
-        #batch = pg.graphics.Batch()
-        #self.bg = pg.shapes.Rectangle(x=0, y=0, width=800, height=600, color=(255, 255, 255))
 
         self.previous_artist_label = pg.text.Label("Artiste", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER+50, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
         self.previous_title_label = pg.text.Label("Titre", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER+30, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
@@ -128,13 +139,13 @@ class ControlWindow(pg.window.Window):
                 step = STEP_PLAYING
                 player = tracks[track_number].media.play()
             elif step == STEP_PLAYING: # abandon, les équipes n'ont pas tout trouvé
-                reset()
+                reset(fadeout=FADEOUT)
             elif step == STEP_ANSWERING:
                 step = STEP_PLAYING
                 player.volume = 1
                 # player.play()
             elif step == STEP_REVEALED:
-                reset()
+                reset(fadeout=FADEOUT)
 
         elif symbol == pg.window.key.UP and step == STEP_IDLE and track_number > 0:
             track_number -= 1
@@ -219,7 +230,7 @@ if __name__ == "__main__":
 
         for idx, line in enumerate(lines):
             track_artist, track_title, track_file = line.split("_")
-            track_media = pg.media.load(track_file, streaming=False)
+            track_media = pg.media.load(os.path.join("tracks", track_file), streaming=False)
             track = Track(track_artist, track_title, track_media)
             tracks.append(track)
             print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title} ({track_file})")
