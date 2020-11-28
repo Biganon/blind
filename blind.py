@@ -9,18 +9,17 @@ STEP_ANSWERING = 2
 STEP_REVEALED = 3
 TRACKS_CENTER = 500
 TEAMS_CENTER = 200
-FADEOUT = True
-FADEOUT_INTERVAL = 0.1
+FADEOUT_FACTOR = 0.8
 
-def make_quieter(dt, fadeout=True):
+def make_quieter(dt):
     global player
     global answering_team    
     global artist_found
     global title_found
     global step
 
-    if player.volume > 0.01 and fadeout:
-        player.volume *= 0.5
+    if player.volume > 0.01:
+        player.volume *= FADEOUT_FACTOR
         return
 
     player.pause()
@@ -33,8 +32,8 @@ def make_quieter(dt, fadeout=True):
     artist_found = False
     title_found = False
 
-def reset(fadeout=True):
-    pg.clock.schedule_interval(make_quieter, FADEOUT_INTERVAL, fadeout=fadeout)
+def reset():
+    pg.clock.schedule_interval(make_quieter, 0.1)
 
 class ButtonCheckWindow(pg.window.Window):
     def __init__(self):
@@ -136,13 +135,13 @@ class ControlWindow(pg.window.Window):
                 step = STEP_PLAYING
                 player = tracks[track_number].media.play()
             elif step == STEP_PLAYING: # abandon, les équipes n'ont pas tout trouvé
-                reset(fadeout=FADEOUT)
+                reset()
             elif step == STEP_ANSWERING:
                 step = STEP_PLAYING
                 player.volume = 1
                 # player.play()
             elif step == STEP_REVEALED:
-                reset(fadeout=FADEOUT)
+                reset()
 
         elif symbol == pg.window.key.UP and step == STEP_IDLE and track_number > 0:
             track_number -= 1
