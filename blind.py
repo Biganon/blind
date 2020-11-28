@@ -126,8 +126,7 @@ class ControlWindow(pg.window.Window):
         if symbol == pg.window.key.ENTER:
             if step == STEP_IDLE:
                 step = STEP_PLAYING
-                media = pg.media.load(tracks[track_number].file, streaming=False)
-                player = media.play()
+                player = tracks[track_number].media.play()
             elif step == STEP_PLAYING: # abandon, les équipes n'ont pas tout trouvé
                 reset()
             elif step == STEP_ANSWERING:
@@ -155,10 +154,10 @@ class Team:
         self.can_buzz = True
 
 class Track:
-    def __init__(self, artist="ARTIST", title="TITLE", file="FILE"):
+    def __init__(self, artist="ARTIST", title="TITLE", media=None):
         self.artist = artist
         self.title = title
-        self.file = file
+        self.media = media
 
 if __name__ == "__main__":
 
@@ -218,10 +217,16 @@ if __name__ == "__main__":
         with open(playlist_file, "r") as f:
             lines = f.read().splitlines()
 
-        for line in lines:
+        for idx, line in enumerate(lines):
             track_artist, track_title, track_file = line.split("_")
-            track = Track(track_artist, track_title, track_file)
+            track_media = pg.media.load(track_file, streaming=False)
+            track = Track(track_artist, track_title, track_media)
             tracks.append(track)
+            print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title} ({track_file})")
+
+        dummy_player = tracks[0].media.play()
+        dummy_player.pause()
+        del dummy_player
 
         control_window = ControlWindow()
 
