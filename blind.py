@@ -10,6 +10,7 @@ STEP_REVEALED = 3
 TRACKS_CENTER = 500
 TEAMS_CENTER = 200
 FADEOUT_FACTOR = 0.8
+BUZZER_FX = "buzzer2.wav"
 
 def make_quieter(dt):
     global player
@@ -101,7 +102,7 @@ class ControlWindow(pg.window.Window):
         else:
             self.current_title_label.color = (255, 255, 255, 255)
 
-        if title_found and artist_found:
+        if title_found and artist_found and step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter qu'une fois
             step = STEP_REVEALED
             player.volume = 1
             # player.play()
@@ -231,6 +232,8 @@ if __name__ == "__main__":
             tracks.append(track)
             print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title} ({track_file})")
 
+        buzzer_fx = pg.media.load(os.path.join("fx", BUZZER_FX), streaming=False)
+
         dummy_player = tracks[0].media.play()
         dummy_player.pause()
         del dummy_player
@@ -251,6 +254,7 @@ if __name__ == "__main__":
                     answering_team = buzzing_team
                 else:
                     return
+                buzzer_fx.play()
                 answering_team.can_buzz = False
                 step = STEP_ANSWERING
                 player.volume = 0.1
