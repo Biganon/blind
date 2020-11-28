@@ -19,11 +19,8 @@ def make_quieter(dt, fadeout=True):
     global title_found
     global step
 
-    if player.volume > 0.05 and fadeout:
-        player.volume -= 0.05
-        return
     if player.volume > 0.01 and fadeout:
-        player.volume -= 0.01
+        player.volume *= 0.5
         return
 
     player.pause()
