@@ -2,15 +2,30 @@ import os
 import pyglet as pg
 import sys
 
+# Constantes
+############
+
 FONT1 = "monospace"
+
 STEP_IDLE = 0
 STEP_PLAYING = 1
 STEP_ANSWERING = 2
 STEP_REVEALED = 3
-TRACKS_CENTER = 500
-TEAMS_CENTER = 200
+
+CONTROL_WINDOW_WIDTH = 800
+CONTROL_WINDOW_HEIGHT = 600
+CONTROL_WINDOW_PADDING = 20
+TRACKS_CENTER = CONTROL_WINDOW_HEIGHT - 100
+TIMER_BAR_WIDTH = 200
+TIMER_BAR_HEIGHT = 20
+
 FADEOUT_FACTOR = 0.8
 BUZZER_FX = "buzzer2.wav"
+SUCCESS_FX = "success4.wav"
+TIMER_DURATION = 3
+
+# Callbacks
+###########
 
 def make_quieter(dt):
     global player
@@ -32,9 +47,35 @@ def make_quieter(dt):
     answering_team = None
     artist_found = False
     title_found = False
+    reset_timer()
 
-def reset():
+def reduce_timer(dt):
+    global timer
+
+    unit = dt / TIMER_DURATION
+
+    if timer > unit:
+        timer -= unit
+        return
+
+    timer = 0
+    pg.clock.unschedule(reduce_timer)
+
+# Fonctions utilitaires
+#######################
+
+def reset_timer():
+    global timer
+    global timer_running
+    timer = 1
+    timer_running = False
+    pg.clock.unschedule(reduce_timer)
+
+def reset_turn():
     pg.clock.schedule_interval(make_quieter, 0.1)
+
+# Classes de fenêtres
+#####################
 
 class ButtonCheckWindow(pg.window.Window):
     def __init__(self):
@@ -51,21 +92,26 @@ class ButtonCheckWindow(pg.window.Window):
 
 class ControlWindow(pg.window.Window):
     def __init__(self):
-        super(ControlWindow, self).__init__(800, 600, caption="Blind - Contrôleur")
+        super(ControlWindow, self).__init__(CONTROL_WINDOW_WIDTH, CONTROL_WINDOW_HEIGHT, caption="Blind - Contrôleur")
 
-        self.previous_artist_label = pg.text.Label("Artiste", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER+50, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
-        self.previous_title_label = pg.text.Label("Titre", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER+30, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
+        self.previous_artist_label = pg.text.Label("Artiste", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER+55, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
+        self.previous_title_label = pg.text.Label("Titre", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER+35, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
         self.current_artist_label = pg.text.Label("Artiste", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER+10, anchor_x="center", anchor_y="center")
         self.current_title_label = pg.text.Label("Titre", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER-10, anchor_x="center", anchor_y="center")
-        self.next_artist_label = pg.text.Label("Artiste", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER-30, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
-        self.next_title_label = pg.text.Label("Titre", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER-50, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
-        self.track_number_label = pg.text.Label("#/#", font_name=FONT1, font_size=18, x=20, y=TRACKS_CENTER, anchor_x="left", anchor_y="center")
-        self.step_label = pg.text.Label("Etape", font_name=FONT1, font_size=18, x=20, y=20, anchor_x="left", anchor_y="bottom")
-        self.scores_label = pg.text.Label("Scores", font_name=FONT1, font_size=18, multiline=True, width=760, align="right", x=780, y=20, anchor_x="right", anchor_y="bottom") 
+        self.next_artist_label = pg.text.Label("Artiste", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER-35, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
+        self.next_title_label = pg.text.Label("Titre", font_name=FONT1, font_size=18, x=self.width//2, y=TRACKS_CENTER-55, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
+        self.track_number_label = pg.text.Label("#/#", font_name=FONT1, font_size=18, x=CONTROL_WINDOW_PADDING, y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING, anchor_x="left", anchor_y="top")
+        self.step_label = pg.text.Label("Etape", font_name=FONT1, font_size=18, x=CONTROL_WINDOW_PADDING, y=CONTROL_WINDOW_PADDING, anchor_x="left", anchor_y="bottom")
+        self.scores_label = pg.text.Label("Scores", font_name=FONT1, font_size=18, multiline=True, width=CONTROL_WINDOW_WIDTH-(2*CONTROL_WINDOW_PADDING), align="right", x=CONTROL_WINDOW_WIDTH-CONTROL_WINDOW_PADDING, y=CONTROL_WINDOW_PADDING, anchor_x="right", anchor_y="bottom") 
+
+        self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-4, CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-4, TIMER_BAR_WIDTH+4, TIMER_BAR_HEIGHT+4, color=(255, 255, 255))
+        self.timer_inside = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-3, CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-3, TIMER_BAR_WIDTH+2, TIMER_BAR_HEIGHT+2, color=(0, 0, 0))
+        self.timer_bar = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-2, CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-2, TIMER_BAR_WIDTH, TIMER_BAR_HEIGHT, color=(255, 255, 255))
 
     def on_draw(self):
         global step
         global player
+        global timer_running
 
         self.clear()
 
@@ -89,8 +135,14 @@ class ControlWindow(pg.window.Window):
         self.track_number_label.text = f"{track_number+1}/{len(tracks)}"
 
         self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[step]
+        
         if step == STEP_ANSWERING:
             self.step_label.text += f" ({answering_team.name})"
+            if not timer_running:
+                timer_running = True
+                pg.clock.schedule_interval(reduce_timer, 0.01)
+
+        self.timer_bar.width = timer * TIMER_BAR_WIDTH
 
         if artist_found:
             self.current_artist_label.color = (0, 255, 0, 255)
@@ -105,14 +157,14 @@ class ControlWindow(pg.window.Window):
         if title_found and artist_found and step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter qu'une fois
             step = STEP_REVEALED
             player.volume = 1
-            # player.play()
+            # pg.clock.unschedule(reduce_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
+            # player.play() # Alternative à la réduction du son
 
         scores_string = ""
         for team in teams:
             scores_string += f"{teams[team].name} : {str(teams[team].score).rjust(3)}\n"
         scores_string = scores_string.strip()
         self.scores_label.text = scores_string
-
 
         self.previous_artist_label.draw()
         self.previous_title_label.draw()
@@ -123,6 +175,9 @@ class ControlWindow(pg.window.Window):
         self.track_number_label.draw()
         self.step_label.draw()
         self.scores_label.draw()
+        self.timer_outline.draw()
+        self.timer_inside.draw()
+        self.timer_bar.draw()
 
     def on_key_press(self, symbol, modifiers):
         global step
@@ -136,13 +191,17 @@ class ControlWindow(pg.window.Window):
                 step = STEP_PLAYING
                 player = tracks[track_number].media.play()
             elif step == STEP_PLAYING: # abandon, les équipes n'ont pas tout trouvé
-                reset()
+                if modifiers == 1: # shift appuyé
+                    reset_turn()
+                else:
+                    step = STEP_REVEALED
             elif step == STEP_ANSWERING:
                 step = STEP_PLAYING
                 player.volume = 1
-                # player.play()
+                reset_timer()
+                # player.play() # Alternative à la réduction du son
             elif step == STEP_REVEALED:
-                reset()
+                reset_turn()
 
         elif symbol == pg.window.key.UP and step == STEP_IDLE and track_number > 0:
             track_number -= 1
@@ -151,9 +210,14 @@ class ControlWindow(pg.window.Window):
         elif symbol == pg.window.key.T and step == STEP_ANSWERING and not title_found:
             answering_team.score += 1
             title_found = True
+            success_fx.play()
         elif symbol == pg.window.key.A and step == STEP_ANSWERING and not artist_found:
             answering_team.score += 1
             artist_found = True
+            success_fx.play()
+
+# Classes de jeu
+################
 
 class Team:
     def __init__(self, name="NAME"):
@@ -167,6 +231,9 @@ class Track:
         self.title = title
         self.media = media
 
+# Exécution principale
+######################
+
 if __name__ == "__main__":
 
     teams = {}
@@ -177,6 +244,8 @@ if __name__ == "__main__":
     answering_team = None
     artist_found = False
     title_found = False
+    timer = 1 # va de 1 à 0
+    timer_running = False
 
     try:
         action = sys.argv[1]
@@ -233,6 +302,7 @@ if __name__ == "__main__":
             print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title} ({track_file})")
 
         buzzer_fx = pg.media.load(os.path.join("fx", BUZZER_FX), streaming=False)
+        success_fx = pg.media.load(os.path.join("fx", SUCCESS_FX), streaming=False)
 
         dummy_player = tracks[0].media.play()
         dummy_player.pause()
