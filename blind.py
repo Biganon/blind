@@ -43,6 +43,7 @@ NEUTRAL_IMAGE = "thinking2.png"
 BACKGROUND_IMAGE = "background1.png"
 
 DEFAULT_ANSWER_TIMER_DURATION = 3
+DEFAULT_RETRY_MODE = RETRY_MODE_STRICT
 DEFAULT_RETRY_TIMER_DURATION = 5
 
 # Callbacks
@@ -67,14 +68,14 @@ def make_quieter(dt):
     pg.clock.unschedule(make_quieter)
     for team in teams:
         teams[team].can_buzz = True
-    answering_team = None
     artist_revealed = False
     title_revealed = False
     artist_found_by = None
     title_found_by = None
-    reset_timer()
+    answering_team = None
+    reset_answer_timer()
 
-def reduce_timer(dt):
+def reduce_answer_timer(dt):
     global timer
 
     unit = dt / chosen_answer_timer_duration
@@ -84,7 +85,12 @@ def reduce_timer(dt):
         return
 
     timer = 0
-    pg.clock.unschedule(reduce_timer)
+
+    pg.clock.unschedule(reduce_answer_timer)
+
+def restore_buzzer(dt, team):
+    print(f"{team.name} peut de nouveau buzzer")
+    team.can_buzz = True
 
 # Fonctions utilitaires
 #######################
@@ -96,12 +102,12 @@ def open_joystick():
     joystick = joysticks[0]
     joystick.open()
 
-def reset_timer():
+def reset_answer_timer():
     global timer
     global timer_running
     timer = 1
     timer_running = False
-    pg.clock.unschedule(reduce_timer)
+    pg.clock.unschedule(reduce_answer_timer)
 
 def reset_turn():
     pg.clock.schedule_interval(make_quieter, 0.1)
@@ -201,7 +207,7 @@ class ControlWindow(pg.window.Window):
             self.step_label.text += f" ({answering_team.name})"
             if not timer_running:
                 timer_running = True
-                pg.clock.schedule_interval(reduce_timer, 0.01)
+                pg.clock.schedule_interval(reduce_answer_timer, 0.01)
 
         self.timer_bar.width = timer * TIMER_BAR_WIDTH
 
@@ -218,7 +224,7 @@ class ControlWindow(pg.window.Window):
         if title_revealed and artist_revealed and step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter qu'une fois
             step = STEP_REVEALED
             player.volume = 1
-            # pg.clock.unschedule(reduce_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
+            # pg.clock.unschedule(reduce_answer_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
             # player.play() # Alternative à la réduction du son
 
         scores_string = ""
@@ -269,7 +275,9 @@ class ControlWindow(pg.window.Window):
             elif step == STEP_ANSWERING:
                 step = STEP_PLAYING
                 player.volume = 1
-                reset_timer()
+                if chosen_retry_mode == RETRY_MODE_TIMER:
+                    pg.clock.schedule_once(restore_buzzer, chosen_retry_timer_duration, team=answering_team)
+                reset_answer_timer() # Attention : doit venir vers la fin, réinitialise answering_team
                 # player.play() # Alternative à la réduction du son
             elif step == STEP_REVEALED:
                 reset_turn()
@@ -457,7 +465,9 @@ def check():
 @click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt")
 @click.option("--teams-file", type=click.Path(exists=True), default="teams.txt")
 @click.option("--answer-timer-duration", type=int, default=DEFAULT_ANSWER_TIMER_DURATION)
-def play(playlist_file, teams_file, answer_timer_duration):
+@click.option("--retry-mode", type=click.Choice(["strict", "alternating", "timer"]), default=("strict", "alternating", "timer")[DEFAULT_RETRY_MODE])
+@click.option("--retry-timer-duration", type=int, default=DEFAULT_RETRY_TIMER_DURATION)
+def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_timer_duration):
     """Play the game."""
     global joystick
     global teams 
@@ -476,6 +486,8 @@ def play(playlist_file, teams_file, answer_timer_duration):
     global background_image
     global success_fx
     global chosen_answer_timer_duration
+    global chosen_retry_mode
+    global chosen_retry_timer_duration
     
     step = STEP_IDLE
     track_number = 0
@@ -486,6 +498,8 @@ def play(playlist_file, teams_file, answer_timer_duration):
     timer = 1 # va de 1 à 0
     timer_running = False
     chosen_answer_timer_duration = answer_timer_duration
+    chosen_retry_mode = ("strict", "alternating", "timer").index(retry_mode)
+    chosen_retry_timer_duration = retry_timer_duration
 
     open_joystick()
     teams = {}
@@ -540,10 +554,13 @@ def play(playlist_file, teams_file, answer_timer_duration):
             else:
                 return
             buzzer_fx.play()
-            answering_team.can_buzz = False
             step = STEP_ANSWERING
             player.volume = 0.1
             # player.pause() # Alternative à la réduction du son
+            if chosen_retry_mode == RETRY_MODE_ALTERNATING:
+                for team in teams:
+                    teams[team].can_buzz = True
+            answering_team.can_buzz = False
     
     pg.app.run()
 
