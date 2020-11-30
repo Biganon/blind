@@ -1,3 +1,4 @@
+import click
 import coverpy
 import os
 import pyglet as pg
@@ -20,6 +21,10 @@ STEP_PLAYING = 1
 STEP_ANSWERING = 2
 STEP_REVEALED = 3
 
+RETRY_MODE_STRICT = 0
+RETRY_MODE_ALTERNATING = 1
+RETRY_MODE_TIMER = 2
+
 CONTROL_WINDOW_WIDTH = 800
 CONTROL_WINDOW_HEIGHT = 600
 CONTROL_WINDOW_PADDING = 20
@@ -29,14 +34,16 @@ TIMER_BAR_HEIGHT = 20
 DISPLAY_WINDOW_WIDTH = 1200
 DISPLAY_WINDOW_HEIGHT = 900
 DISPLAY_WINDOW_PADDING = 40
-DISPLAY_WINDOW_BACKGROUND_COLOR = (255,255,255)
 
 FADEOUT_FACTOR = 0.8
+
 BUZZER_FX = "buzzer2.wav"
 SUCCESS_FX = "success4.wav"
-TIMER_DURATION = 3
 NEUTRAL_IMAGE = "thinking2.png"
 BACKGROUND_IMAGE = "background1.png"
+
+DEFAULT_ANSWER_TIMER_DURATION = 3
+DEFAULT_RETRY_TIMER_DURATION = 5
 
 # Callbacks
 ###########
@@ -70,7 +77,7 @@ def make_quieter(dt):
 def reduce_timer(dt):
     global timer
 
-    unit = dt / TIMER_DURATION
+    unit = dt / chosen_answer_timer_duration
 
     if timer > unit:
         timer -= unit
@@ -286,7 +293,6 @@ class DisplayWindow(pg.window.Window):
     def __init__(self):
         super(DisplayWindow, self).__init__(DISPLAY_WINDOW_WIDTH, DISPLAY_WINDOW_HEIGHT, resizable=True, caption="Blind - Afficheur")
         self.set_location(50,50)
-        #self.background = pg.shapes.Rectangle(0, 0, 0, 0, color=DISPLAY_WINDOW_BACKGROUND_COLOR)
         self.background = background_image
         self.current_artist_label = pg.text.Label("Artiste", font_name=DISPLAY_WINDOW_FONT, font_size=0, x=0, y=0, anchor_x="left", anchor_y="bottom", color=(0,0,0,255))
         self.current_title_label = pg.text.Label("Titre", font_name=DISPLAY_WINDOW_FONT, font_size=0, x=0, y=0, anchor_x="left", anchor_y="bottom", color=(0,0,0,255))
@@ -392,137 +398,157 @@ class Track:
         self.media = media
         self.cover = cover
 
-# Exécution principale
-######################
+# Sous-commandes, options et paramètres
+#######################################
 
-if __name__ == "__main__":
+@click.group()
+def cli():
+    pass
 
-    joystick = None
-    teams = {}
-    tracks = []
+@cli.command()
+@click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt")
+def download(playlist_file):
+    """Download songs and cover pictures."""
+    with open(playlist_file, "r") as f:
+        tracks = f.read().splitlines()
+
+    for track in tracks:
+
+        print(f"Démarre '{track}'...")
+
+        if not os.path.isfile(os.path.join("tracks", f"{track}.mp3")):
+            download_audio(track)
+        else:
+            print(f"Le fichier audio existe déjà, ignore.")
+
+        if not os.path.isfile(os.path.join("covers", f"{track}.jpg")):
+            download_cover(track)
+        else:
+            print(f"La pochette existe déjà, ignore.")
+
+@cli.command()
+def check():
+    """Discover what button triggers what code, visually."""
+    global joystick
+    open_joystick()
+    button_check_window = ButtonCheckWindow()
+
+    @joystick.event
+    def on_joybutton_press(joystick, button):
+        # ici : convertir évent. le code reçu
+        try:
+            button_check_window.button_labels[button].color = (255, 0, 0, 255)
+        except IndexError:
+            pass
+        button_check_window.dispatch_event("on_draw")
+
+    @joystick.event
+    def on_joybutton_release(joystick, button):
+        # ici : convertir évent. le code reçu
+        try:
+            button_check_window.button_labels[button].color = (255, 255, 255, 255)
+        except IndexError:
+            pass
+        button_check_window.dispatch_event("on_draw")
+
+    pg.app.run()
+
+@cli.command()
+@click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt")
+@click.option("--teams-file", type=click.Path(exists=True), default="teams.txt")
+@click.option("--answer-timer-duration", type=int, default=DEFAULT_ANSWER_TIMER_DURATION)
+def play(playlist_file, teams_file, answer_timer_duration):
+    """Play the game."""
+    global joystick
+    global teams 
+    global tracks
+    global step
+    global track_number
+    global player
+    global answering_team
+    global artist_revealed
+    global title_revealed
+    global artist_found_by
+    global title_found_by
+    global timer
+    global timer_running
+    global neutral_image
+    global background_image
+    global success_fx
+    global chosen_answer_timer_duration
+    
     step = STEP_IDLE
     track_number = 0
-    player = None
-    answering_team = None
     artist_revealed = False
     title_revealed = False
     artist_found_by = None
     title_found_by = None
     timer = 1 # va de 1 à 0
     timer_running = False
+    chosen_answer_timer_duration = answer_timer_duration
 
-    try:
-        subcommand = sys.argv[1]
-    except IndexError:
-        print(f"Usage :\t{sys.argv[0]} TEAMS_FILE")
-        print(f"\t{sys.argv[0]} check")
-        sys.exit()
+    open_joystick()
+    teams = {}
+    with open(teams_file, "r") as f:
+        lines = f.read().splitlines()
 
-    if subcommand == "download":
-        playlist = sys.argv[2]
+    for line in lines:
+        fields = line.split(":")
+        team_name, team_id = fields[0], int(fields[1])
+        if len(fields) == 3:
+            team_score = int(fields[2])
+        else:
+            team_score = 0
+        teams[team_id] = Team(team_name, team_score)
 
-        with open(playlist, "r") as f:
-            tracks = f.read().splitlines()
+    with open(playlist_file, "r") as f:
+        lines = f.read().splitlines()
 
-        for track in tracks:
+    tracks = []
 
-            print(f"Démarre '{track}'...")
+    for idx, line in enumerate(lines):
+        track_artist, track_title = line.split(" - ")
+        track_media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
+        track_cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
+        track = Track(track_artist, track_title, track_media, track_cover)
+        tracks.append(track)
+        print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title}")
 
-            if not os.path.isfile(os.path.join("tracks", f"{track}.mp3")):
-                download_audio(track)
-            else:
-                print(f"Le fichier audio existe déjà, ignore.")
+    buzzer_fx = pg.media.load(os.path.join("assets", "fx", BUZZER_FX), streaming=False)
+    success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
 
-            if not os.path.isfile(os.path.join("covers", f"{track}.jpg")):
-                download_cover(track)
-            else:
-                print(f"La pochette existe déjà, ignore.")
-        sys.exit(0)
+    neutral_image = pg.image.load(os.path.join("assets", "images", NEUTRAL_IMAGE)).get_texture()
+    background_image = pg.image.load(os.path.join("assets", "images", BACKGROUND_IMAGE)).get_texture()
 
-    elif subcommand == "check":
-        open_joystick()
-        button_check_window = ButtonCheckWindow()
+    tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
 
-        @joystick.event
-        def on_joybutton_press(joystick, button):
-            # ici : convertir évent. le code reçu
+    control_window = ControlWindow()
+    display_window = DisplayWindow()
+
+    @joystick.event
+    def on_joybutton_press(joystick, button):
+        global step
+        global answering_team
+
+        if step == STEP_PLAYING:
             try:
-                button_check_window.button_labels[button].color = (255, 0, 0, 255)
-            except IndexError:
-                pass
-            button_check_window.dispatch_event("on_draw")
-
-        @joystick.event
-        def on_joybutton_release(joystick, button):
-            # ici : convertir évent. le code reçu
-            try:
-                button_check_window.button_labels[button].color = (255, 255, 255, 255)
-            except IndexError:
-                pass
-            button_check_window.dispatch_event("on_draw")
-
-        pg.app.run()
-
-    elif subcommand == "play":
-        open_joystick()
-        teams_file = sys.argv[2]
-        playlist_file = sys.argv[3]
-        with open(teams_file, "r") as f:
-            lines = f.read().splitlines()
-
-        for line in lines:
-            fields = line.split(":")
-            team_name, team_id = fields[0], int(fields[1])
-            if len(fields) == 3:
-                team_score = int(fields[2])
+                buzzing_team = teams[button]
+            except KeyError:
+                return
+            if buzzing_team.can_buzz:
+                answering_team = buzzing_team
             else:
-                team_score = 0
-            teams[team_id] = Team(team_name, team_score)
+                return
+            buzzer_fx.play()
+            answering_team.can_buzz = False
+            step = STEP_ANSWERING
+            player.volume = 0.1
+            # player.pause() # Alternative à la réduction du son
+    
+    pg.app.run()
 
-        with open(playlist_file, "r") as f:
-            lines = f.read().splitlines()
+# Exécution principale
+######################
 
-        for idx, line in enumerate(lines):
-            track_artist, track_title = line.split(" - ")
-            track_media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
-            track_cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
-            track = Track(track_artist, track_title, track_media, track_cover)
-            tracks.append(track)
-            print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title}")
-
-        buzzer_fx = pg.media.load(os.path.join("assets", "fx", BUZZER_FX), streaming=False)
-        success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
-
-        neutral_image = pg.image.load(os.path.join("assets", "images", NEUTRAL_IMAGE)).get_texture()
-        background_image = pg.image.load(os.path.join("assets", "images", BACKGROUND_IMAGE)).get_texture()
-
-        tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
-
-        control_window = ControlWindow()
-        display_window = DisplayWindow()
-
-        @joystick.event
-        def on_joybutton_press(joystick, button):
-            global step
-            global answering_team
-
-            if step == STEP_PLAYING:
-                try:
-                    buzzing_team = teams[button]
-                except KeyError:
-                    return
-                if buzzing_team.can_buzz:
-                    answering_team = buzzing_team
-                else:
-                    return
-                buzzer_fx.play()
-                answering_team.can_buzz = False
-                step = STEP_ANSWERING
-                player.volume = 0.1
-                # player.pause() # Alternative à la réduction du son
-        
-        pg.app.run()
-
-    else:
-        print("Action inconnue.")
-        sys.exit()
+if __name__ == "__main__":
+    cli()
