@@ -339,9 +339,9 @@ class DisplayWindow(pg.window.Window):
 ################
 
 class Team:
-    def __init__(self, name="NAME"):
+    def __init__(self, name="NAME", score=0):
         self.name = name
-        self.score = 0
+        self.score = score
         self.can_buzz = True
 
 class Track:
@@ -409,9 +409,13 @@ if __name__ == "__main__":
             lines = f.read().splitlines()
 
         for line in lines:
-            team_name, team_id = line.split("_")
-            team_id = int(team_id) 
-            teams[team_id] = Team(team_name)
+            fields = line.split(":")
+            team_name, team_id = fields[0], int(fields[1])
+            if len(fields) == 3:
+                team_score = int(fields[2])
+            else:
+                team_score = 0
+            teams[team_id] = Team(team_name, team_score)
 
         with open(playlist_file, "r") as f:
             lines = f.read().splitlines()
