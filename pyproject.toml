@@ -7,8 +7,12 @@ authors = ["Simon Junod <sj@simonjunod.ch>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 pyglet = "^1.5.11"
+requests = "^2.25.0"
+youtube_dl = "^2020.11.29"
+coverpy = "^0.0.4"
 
 [tool.poetry.dev-dependencies]
+ipython = "^7.19.0"
 
 [build-system]
 requires = ["poetry>=0.12"]

@@ -417,9 +417,9 @@ if __name__ == "__main__":
             lines = f.read().splitlines()
 
         for idx, line in enumerate(lines):
-            track_artist, track_title, track_media, track_cover = line.split("_")
-            track_media = pg.media.load(os.path.join("tracks", track_media), streaming=False)
-            track_cover = pg.image.load(os.path.join("covers", track_cover)).get_texture()
+            track_artist, track_title = line.split(" - ")
+            track_media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
+            track_cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
             track = Track(track_artist, track_title, track_media, track_cover)
             tracks.append(track)
             print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title}")
