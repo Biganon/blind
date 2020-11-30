@@ -1,6 +1,11 @@
+import coverpy
 import os
 import pyglet as pg
+import re
+import requests
+import subprocess
 import sys
+import youtube_dl
 
 # Constantes
 ############
@@ -77,6 +82,13 @@ def reduce_timer(dt):
 # Fonctions utilitaires
 #######################
 
+def open_joystick():
+    global joystick
+    joysticks = pg.input.get_joysticks()
+    assert joysticks, "Aucun joystick connecté"
+    joystick = joysticks[0]
+    joystick.open()
+
 def reset_timer():
     global timer
     global timer_running
@@ -86,6 +98,35 @@ def reset_timer():
 
 def reset_turn():
     pg.clock.schedule_interval(make_quieter, 0.1)
+
+def download_audio(track): 
+    ydl_opts = {"outtmpl": r"temp_audio.%(ext)s",
+                "quiet": True,
+                "format": "bestaudio/best",
+                "postprocessors": [{
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "320"
+                }]}
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([f"ytsearch:{track}"])
+
+    subprocess.run(["sox", "temp_audio.mp3", os.path.join("tracks", f"{track}.mp3"), "silence", "1", "0.1", "1%"])
+    os.remove("temp_audio.mp3")
+
+def download_cover(track):
+    temp_cover_file = "temp_cover.jpg"
+
+    cp = coverpy.CoverPy()
+    cover = cp.get_cover(track)
+    cover_url = cover.artwork(800)
+
+    response = requests.get(cover_url)
+    if response.status_code == 200:
+        with open(temp_cover_file, "wb") as f:
+            f.write(response.content)
+
+    os.rename(temp_cover_file, os.path.join("covers", f"{track}.jpg"))
 
 # Classes de fenêtres
 #####################
@@ -356,6 +397,7 @@ class Track:
 
 if __name__ == "__main__":
 
+    joystick = None
     teams = {}
     tracks = []
     step = STEP_IDLE
@@ -370,18 +412,35 @@ if __name__ == "__main__":
     timer_running = False
 
     try:
-        action = sys.argv[1]
+        subcommand = sys.argv[1]
     except IndexError:
         print(f"Usage :\t{sys.argv[0]} TEAMS_FILE")
         print(f"\t{sys.argv[0]} check")
         sys.exit()
 
-    joysticks = pg.input.get_joysticks()
-    assert joysticks, "Aucun joystick connecté"
-    joystick = joysticks[0]
-    joystick.open()
+    if subcommand == "download":
+        playlist = sys.argv[2]
 
-    if action == "check":
+        with open(playlist, "r") as f:
+            tracks = f.read().splitlines()
+
+        for track in tracks:
+
+            print(f"Démarre '{track}'...")
+
+            if not os.path.isfile(os.path.join("tracks", f"{track}.mp3")):
+                download_audio(track)
+            else:
+                print(f"Le fichier audio existe déjà, ignore.")
+
+            if not os.path.isfile(os.path.join("covers", f"{track}.jpg")):
+                download_cover(track)
+            else:
+                print(f"La pochette existe déjà, ignore.")
+        sys.exit(0)
+
+    elif subcommand == "check":
+        open_joystick()
         button_check_window = ButtonCheckWindow()
 
         @joystick.event
@@ -402,7 +461,10 @@ if __name__ == "__main__":
                 pass
             button_check_window.dispatch_event("on_draw")
 
-    elif action == "play":
+        pg.app.run()
+
+    elif subcommand == "play":
+        open_joystick()
         teams_file = sys.argv[2]
         playlist_file = sys.argv[3]
         with open(teams_file, "r") as f:
@@ -458,8 +520,9 @@ if __name__ == "__main__":
                 step = STEP_ANSWERING
                 player.volume = 0.1
                 # player.pause() # Alternative à la réduction du son
+        
+        pg.app.run()
 
     else:
+        print("Action inconnue.")
         sys.exit()
-
-    pg.app.run()
