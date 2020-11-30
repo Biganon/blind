@@ -51,7 +51,6 @@ DEFAULT_RETRY_TIMER_DURATION = 5
 
 def make_quieter(dt):
     global player
-    global answering_team    
     global artist_revealed
     global title_revealed
     global artist_found_by
@@ -72,7 +71,6 @@ def make_quieter(dt):
     title_revealed = False
     artist_found_by = None
     title_found_by = None
-    answering_team = None
     reset_answer_timer()
 
 def reduce_answer_timer(dt):
@@ -204,7 +202,7 @@ class ControlWindow(pg.window.Window):
         self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[step]
         
         if step == STEP_ANSWERING:
-            self.step_label.text += f" ({answering_team.name})"
+            self.step_label.text += f" ({last_team_to_buzz.name})"
             if not timer_running:
                 timer_running = True
                 pg.clock.schedule_interval(reduce_answer_timer, 0.01)
@@ -223,9 +221,11 @@ class ControlWindow(pg.window.Window):
 
         if title_revealed and artist_revealed and step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter qu'une fois
             step = STEP_REVEALED
-            player.volume = 1
+            if chosen_pause_during_answers:
+                player.play()
+            else:
+                player.volume = 1
             # pg.clock.unschedule(reduce_answer_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
-            # player.play() # Alternative à la réduction du son
 
         scores_string = ""
         for team in teams:
@@ -274,11 +274,13 @@ class ControlWindow(pg.window.Window):
                     title_revealed = True
             elif step == STEP_ANSWERING:
                 step = STEP_PLAYING
-                player.volume = 1
+                if chosen_pause_during_answers:
+                    player.play()
+                else:
+                    player.volume = 1
                 if chosen_retry_mode == RETRY_MODE_TIMER:
-                    pg.clock.schedule_once(restore_buzzer, chosen_retry_timer_duration, team=answering_team)
-                reset_answer_timer() # Attention : doit venir vers la fin, réinitialise answering_team
-                # player.play() # Alternative à la réduction du son
+                    pg.clock.schedule_once(restore_buzzer, chosen_retry_timer_duration, team=last_team_to_buzz)
+                reset_answer_timer()
             elif step == STEP_REVEALED:
                 reset_turn()
 
@@ -287,14 +289,14 @@ class ControlWindow(pg.window.Window):
         elif symbol == pg.window.key.DOWN and step == STEP_IDLE and track_number < len(tracks)-1:
             track_number += 1
         elif symbol == pg.window.key.T and step == STEP_ANSWERING and not title_revealed:
-            answering_team.score += 1
+            last_team_to_buzz.score += 1
             title_revealed = True
-            title_found_by = answering_team
+            title_found_by = last_team_to_buzz
             success_fx.play()
         elif symbol == pg.window.key.A and step == STEP_ANSWERING and not artist_revealed:
-            answering_team.score += 1
+            last_team_to_buzz.score += 1
             artist_revealed = True
-            artist_found_by = answering_team
+            artist_found_by = last_team_to_buzz
             success_fx.play()
 
 class DisplayWindow(pg.window.Window):
@@ -321,7 +323,7 @@ class DisplayWindow(pg.window.Window):
         image.height = image.width
         image.anchor_x = image.width//2
         image.anchor_y = image.height//2
-        image.x = self.width//2 # placé dans `image` artificiellement, utile pour dessiner la barre de timer (L271)
+        image.x = self.width//2 # placé dans `image` artificiellement, utile pour dessiner la barre de timer
         image.y = self.height*0.6
 
         if artist_revealed:
@@ -414,7 +416,7 @@ def cli():
     pass
 
 @cli.command()
-@click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt")
+@click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt", help="Playlist file.")
 def download(playlist_file):
     """Download songs and cover pictures."""
     with open(playlist_file, "r") as f:
@@ -462,12 +464,13 @@ def check():
     pg.app.run()
 
 @cli.command()
-@click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt")
-@click.option("--teams-file", type=click.Path(exists=True), default="teams.txt")
-@click.option("--answer-timer-duration", type=int, default=DEFAULT_ANSWER_TIMER_DURATION)
-@click.option("--retry-mode", type=click.Choice(["strict", "alternating", "timer"]), default=("strict", "alternating", "timer")[DEFAULT_RETRY_MODE])
-@click.option("--retry-timer-duration", type=int, default=DEFAULT_RETRY_TIMER_DURATION)
-def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_timer_duration):
+@click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt", help="Playlist file.")
+@click.option("--teams-file", type=click.Path(exists=True), default="teams.txt", help="Teams file.")
+@click.option("--answer-timer-duration", type=int, default=DEFAULT_ANSWER_TIMER_DURATION, help="How fast a player must answer after buzzing (in seconds).")
+@click.option("--retry-mode", type=click.Choice(["strict", "alternating", "timer"]), default=("strict", "alternating", "timer")[DEFAULT_RETRY_MODE], help="Strict: a player can buzz once per track. Alternating: a player can buzz multiple times, but not in a row. Timer: a player can buzz again, a few seconds after the track was resumed.")
+@click.option("--retry-timer-duration", type=int, default=DEFAULT_RETRY_TIMER_DURATION, help="If --retry-mode is timer, the number of seconds to wait to buzz again.")
+@click.option("--pause-during-answers", is_flag=True, help="Pause tracks when someone is answering. Without this flag, the volume is lowered instead.")
+def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_timer_duration, pause_during_answers):
     """Play the game."""
     global joystick
     global teams 
@@ -475,7 +478,6 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     global step
     global track_number
     global player
-    global answering_team
     global artist_revealed
     global title_revealed
     global artist_found_by
@@ -488,6 +490,7 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     global chosen_answer_timer_duration
     global chosen_retry_mode
     global chosen_retry_timer_duration
+    global chosen_pause_during_answers
     
     step = STEP_IDLE
     track_number = 0
@@ -500,6 +503,7 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     chosen_answer_timer_duration = answer_timer_duration
     chosen_retry_mode = ("strict", "alternating", "timer").index(retry_mode)
     chosen_retry_timer_duration = retry_timer_duration
+    chosen_pause_during_answers = pause_during_answers
 
     open_joystick()
     teams = {}
@@ -542,25 +546,27 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     @joystick.event
     def on_joybutton_press(joystick, button):
         global step
-        global answering_team
+        global last_team_to_buzz
 
         if step == STEP_PLAYING:
             try:
-                buzzing_team = teams[button]
+                team_trying_to_buzz = teams[button]
             except KeyError:
                 return
-            if buzzing_team.can_buzz:
-                answering_team = buzzing_team
+            if team_trying_to_buzz.can_buzz:
+                last_team_to_buzz = team_trying_to_buzz
             else:
                 return
             buzzer_fx.play()
             step = STEP_ANSWERING
-            player.volume = 0.1
-            # player.pause() # Alternative à la réduction du son
+            if chosen_pause_during_answers:
+                player.pause()
+            else:
+                player.volume = 0.1
             if chosen_retry_mode == RETRY_MODE_ALTERNATING:
                 for team in teams:
                     teams[team].can_buzz = True
-            answering_team.can_buzz = False
+            last_team_to_buzz.can_buzz = False
     
     pg.app.run()
 
