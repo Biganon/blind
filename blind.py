@@ -387,10 +387,6 @@ class ControlWindow(pg.window.Window):
             elif step == STEP_REVEALED:
                 reset_turn()
 
-        elif symbol == pg.window.key.UP and step == STEP_IDLE and track_number > 0:
-            track_number -= 1
-        elif symbol == pg.window.key.DOWN and step == STEP_IDLE and track_number < len(tracks)-1:
-            track_number += 1
         elif symbol == pg.window.key.T and step == STEP_ANSWERING and not title_revealed:
             last_team_to_buzz.score += 1
             title_revealed = True
@@ -415,6 +411,12 @@ class ControlWindow(pg.window.Window):
             if player:
                 player.pitch = float(pitch)
 
+    def on_text_motion(self, motion):
+        global track_number
+        if motion == pg.window.key.MOTION_UP and step == STEP_IDLE and track_number > 0:
+            track_number -= 1
+        elif motion == pg.window.key.MOTION_DOWN and step == STEP_IDLE and track_number < len(tracks)-1:
+            track_number += 1
 
 class DisplayWindow(pg.window.Window):
     def __init__(self):
