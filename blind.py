@@ -7,6 +7,7 @@ import requests
 import subprocess
 import sys
 import youtube_dl
+from decimal import Decimal
 
 # Constantes
 ############
@@ -96,7 +97,9 @@ def restore_buzzer(dt, team):
 def open_joystick():
     global joystick
     joysticks = pg.input.get_joysticks()
-    assert joysticks, "Aucun joystick connecté"
+    if not joysticks:
+        print("Aucun joystick connecté")
+        sys.exit()
     joystick = joysticks[0]
     joystick.open()
 
@@ -220,13 +223,20 @@ class ControlWindow(pg.window.Window):
                                               anchor_x="center",
                                               anchor_y="center",
                                               color=(100, 100, 100, 255))
-        self.track_number_label = pg.text.Label("#/#",
+        self.track_number_label = pg.text.Label("Numéro",
                                                 font_name=CONTROL_WINDOW_FONT,
                                                 font_size=CONTROL_WINDOW_FONT_SIZE,
                                                 x=CONTROL_WINDOW_PADDING,
                                                 y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
                                                 anchor_x="left",
                                                 anchor_y="top")
+        self.pitch_label = pg.text.Label("Pitch",
+                                         font_name=CONTROL_WINDOW_FONT,
+                                         font_size=CONTROL_WINDOW_FONT_SIZE,
+                                         x=CONTROL_WINDOW_PADDING,
+                                         y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING-50,
+                                         anchor_x="left",
+                                         anchor_y="top")
         self.step_label = pg.text.Label("Etape",
                                         font_name=CONTROL_WINDOW_FONT,
                                         font_size=CONTROL_WINDOW_FONT_SIZE,
@@ -286,6 +296,7 @@ class ControlWindow(pg.window.Window):
             self.next_title_label.text = "---"
 
         self.track_number_label.text = f"{track_number+1}/{len(tracks)}"
+        self.pitch_label.text = f"Pitch : {pitch}"
 
         self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[step]
         
@@ -329,6 +340,7 @@ class ControlWindow(pg.window.Window):
         self.next_artist_label.draw()
         self.next_title_label.draw()
         self.track_number_label.draw()
+        self.pitch_label.draw()
         self.step_label.draw()
         self.scores_label.draw()
         self.timer_outline.draw()
@@ -349,11 +361,13 @@ class ControlWindow(pg.window.Window):
         global title_revealed
         global artist_found_by
         global title_found_by
+        global pitch
 
         if symbol == pg.window.key.ENTER:
             if step == STEP_IDLE:
                 step = STEP_PLAYING
                 player = tracks[track_number].media.play()
+                player.pitch = float(pitch)
             elif step == STEP_PLAYING:
                 if modifiers == 1: # shift appuyé : repasse en mode idle, sans révéler
                     reset_turn()
@@ -387,6 +401,20 @@ class ControlWindow(pg.window.Window):
             artist_revealed = True
             artist_found_by = last_team_to_buzz
             success_fx.play()
+
+    def on_text(self, text):
+        global pitch
+        if text == ".":
+            pitch += Decimal("0.1")
+            if player:
+                player.pitch = float(pitch)
+        elif text == ",":
+            if pitch <= 0.1:
+                return
+            pitch -= Decimal("0.1")
+            if player:
+                player.pitch = float(pitch)
+
 
 class DisplayWindow(pg.window.Window):
     def __init__(self):
@@ -633,9 +661,11 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     global chosen_retry_mode
     global chosen_retry_timer_duration
     global chosen_pause_during_answers
+    global pitch
     
     step = STEP_IDLE
     track_number = 0
+    player = None
     artist_revealed = False
     title_revealed = False
     artist_found_by = None
@@ -646,6 +676,7 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     chosen_retry_mode = ("strict", "alternating", "timer").index(retry_mode)
     chosen_retry_timer_duration = retry_timer_duration
     chosen_pause_during_answers = pause_during_answers
+    pitch = Decimal("1")
 
     open_joystick()
     teams = {}
