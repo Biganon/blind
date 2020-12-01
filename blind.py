@@ -237,6 +237,13 @@ class ControlWindow(pg.window.Window):
                                          y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING-50,
                                          anchor_x="left",
                                          anchor_y="top")
+        self.seek_label = pg.text.Label("Seek",
+                                        font_name=CONTROL_WINDOW_FONT,
+                                        font_size=CONTROL_WINDOW_FONT_SIZE,
+                                        x=CONTROL_WINDOW_PADDING,
+                                        y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING-100,
+                                        anchor_x="left",
+                                        anchor_y="top")
         self.step_label = pg.text.Label("Etape",
                                         font_name=CONTROL_WINDOW_FONT,
                                         font_size=CONTROL_WINDOW_FONT_SIZE,
@@ -297,6 +304,14 @@ class ControlWindow(pg.window.Window):
 
         self.track_number_label.text = f"{track_number+1}/{len(tracks)}"
         self.pitch_label.text = f"Pitch : {pitch}"
+        if player:
+            elapsed_seconds = int(player.time)
+            elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
+            total_seconds = int(tracks[track_number].media.duration)
+            total_minsec = f"{(total_seconds // 60):02}:{(total_seconds % 60):02}"
+            self.seek_label.text = f"{elapsed_minsec:} / {total_minsec}"
+        else:
+            self.seek_label.text = "- / -"
 
         self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[step]
         
@@ -341,6 +356,7 @@ class ControlWindow(pg.window.Window):
         self.next_title_label.draw()
         self.track_number_label.draw()
         self.pitch_label.draw()
+        self.seek_label.draw()
         self.step_label.draw()
         self.scores_label.draw()
         self.timer_outline.draw()
@@ -417,6 +433,10 @@ class ControlWindow(pg.window.Window):
             track_number -= 1
         elif motion == pg.window.key.MOTION_DOWN and step == STEP_IDLE and track_number < len(tracks)-1:
             track_number += 1
+        elif motion == pg.window.key.MOTION_RIGHT and player:
+            player.seek(player.time + 1)
+        elif motion == pg.window.key.MOTION_LEFT and player:
+            player.seek(player.time - 1)
 
 class DisplayWindow(pg.window.Window):
     def __init__(self):
