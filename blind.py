@@ -122,7 +122,14 @@ def download_audio(track):
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download([f"ytsearch:{track}"])
 
-    subprocess.run(["sox", "temp_audio.mp3", os.path.join("tracks", f"{track}.mp3"), "silence", "1", "0.1", "1%"])
+    subprocess.run(["sox", 
+                    "temp_audio.mp3",
+                    os.path.join("tracks", f"{track}.mp3"),
+                    "silence",
+                    "1",
+                    "0.1",
+                    "1%"])
+
     os.remove("temp_audio.mp3")
 
 def download_cover(track):
@@ -148,7 +155,13 @@ class ButtonCheckWindow(pg.window.Window):
 
         self.button_labels = []
         for i in range(10):
-            self.button_labels.append(pg.text.Label(str(i), font_name=CONTROL_WINDOW_FONT, font_size=36, x=i*30, y=self.height//2, anchor_x="left", anchor_y="center"))
+            self.button_labels.append(pg.text.Label(str(i),
+                                                    font_name=CONTROL_WINDOW_FONT,
+                                                    font_size=36,
+                                                    x=i*30,
+                                                    y=self.height//2,
+                                                    anchor_x="left",
+                                                    anchor_y="center"))
 
     def on_draw(self):
         self.clear()
@@ -157,21 +170,96 @@ class ButtonCheckWindow(pg.window.Window):
 
 class ControlWindow(pg.window.Window):
     def __init__(self):
-        super(ControlWindow, self).__init__(CONTROL_WINDOW_WIDTH, CONTROL_WINDOW_HEIGHT, caption="Blind - Contrôleur")
+        super(ControlWindow, self).__init__(CONTROL_WINDOW_WIDTH,
+                                            CONTROL_WINDOW_HEIGHT,
+                                            caption="Blind - Contrôleur")
 
-        self.previous_artist_label = pg.text.Label("Artiste", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=self.width//2, y=TRACKS_CENTER+55, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
-        self.previous_title_label = pg.text.Label("Titre", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=self.width//2, y=TRACKS_CENTER+35, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
-        self.current_artist_label = pg.text.Label("Artiste", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=self.width//2, y=TRACKS_CENTER+10, anchor_x="center", anchor_y="center")
-        self.current_title_label = pg.text.Label("Titre", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=self.width//2, y=TRACKS_CENTER-10, anchor_x="center", anchor_y="center")
-        self.next_artist_label = pg.text.Label("Artiste", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=self.width//2, y=TRACKS_CENTER-35, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
-        self.next_title_label = pg.text.Label("Titre", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=self.width//2, y=TRACKS_CENTER-55, anchor_x="center", anchor_y="center", color=(100, 100, 100, 255))
-        self.track_number_label = pg.text.Label("#/#", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=CONTROL_WINDOW_PADDING, y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING, anchor_x="left", anchor_y="top")
-        self.step_label = pg.text.Label("Etape", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, x=CONTROL_WINDOW_PADDING, y=CONTROL_WINDOW_PADDING, anchor_x="left", anchor_y="bottom")
-        self.scores_label = pg.text.Label("Scores", font_name=CONTROL_WINDOW_FONT, font_size=CONTROL_WINDOW_FONT_SIZE, multiline=True, width=CONTROL_WINDOW_WIDTH-(2*CONTROL_WINDOW_PADDING), align="right", x=CONTROL_WINDOW_WIDTH-CONTROL_WINDOW_PADDING, y=CONTROL_WINDOW_PADDING, anchor_x="right", anchor_y="bottom") 
+        self.previous_artist_label = pg.text.Label("Artiste",
+                                                   font_name=CONTROL_WINDOW_FONT,
+                                                   font_size=CONTROL_WINDOW_FONT_SIZE,
+                                                   x=self.width//2,
+                                                   y=TRACKS_CENTER+55,
+                                                   anchor_x="center",
+                                                   anchor_y="center",
+                                                   color=(100, 100, 100, 255))
+        self.previous_title_label = pg.text.Label("Titre",
+                                                  font_name=CONTROL_WINDOW_FONT,
+                                                  font_size=CONTROL_WINDOW_FONT_SIZE,
+                                                  x=self.width//2,
+                                                  y=TRACKS_CENTER+35,
+                                                  anchor_x="center",
+                                                  anchor_y="center",
+                                                  color=(100, 100, 100, 255))
+        self.current_artist_label = pg.text.Label("Artiste",
+                                                  font_name=CONTROL_WINDOW_FONT,
+                                                  font_size=CONTROL_WINDOW_FONT_SIZE,
+                                                  x=self.width//2,
+                                                  y=TRACKS_CENTER+10,
+                                                  anchor_x="center",
+                                                  anchor_y="center")
+        self.current_title_label = pg.text.Label("Titre",
+                                                 font_name=CONTROL_WINDOW_FONT,
+                                                 font_size=CONTROL_WINDOW_FONT_SIZE,
+                                                 x=self.width//2,
+                                                 y=TRACKS_CENTER-10,
+                                                 anchor_x="center",
+                                                 anchor_y="center")
+        self.next_artist_label = pg.text.Label("Artiste",
+                                               font_name=CONTROL_WINDOW_FONT,
+                                               font_size=CONTROL_WINDOW_FONT_SIZE,
+                                               x=self.width//2,
+                                               y=TRACKS_CENTER-35,
+                                               anchor_x="center",
+                                               anchor_y="center",
+                                               color=(100, 100, 100, 255))
+        self.next_title_label = pg.text.Label("Titre",
+                                              font_name=CONTROL_WINDOW_FONT,
+                                              font_size=CONTROL_WINDOW_FONT_SIZE,
+                                              x=self.width//2,
+                                              y=TRACKS_CENTER-55,
+                                              anchor_x="center",
+                                              anchor_y="center",
+                                              color=(100, 100, 100, 255))
+        self.track_number_label = pg.text.Label("#/#",
+                                                font_name=CONTROL_WINDOW_FONT,
+                                                font_size=CONTROL_WINDOW_FONT_SIZE,
+                                                x=CONTROL_WINDOW_PADDING,
+                                                y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
+                                                anchor_x="left",
+                                                anchor_y="top")
+        self.step_label = pg.text.Label("Etape",
+                                        font_name=CONTROL_WINDOW_FONT,
+                                        font_size=CONTROL_WINDOW_FONT_SIZE,
+                                        x=CONTROL_WINDOW_PADDING,
+                                        y=CONTROL_WINDOW_PADDING,
+                                        anchor_x="left",
+                                        anchor_y="bottom")
+        self.scores_label = pg.text.Label("Scores",
+                                          font_name=CONTROL_WINDOW_FONT,
+                                          font_size=CONTROL_WINDOW_FONT_SIZE,
+                                          multiline=True,
+                                          width=CONTROL_WINDOW_WIDTH-(2*CONTROL_WINDOW_PADDING),
+                                          align="right",
+                                          x=CONTROL_WINDOW_WIDTH-CONTROL_WINDOW_PADDING,
+                                          y=CONTROL_WINDOW_PADDING,
+                                          anchor_x="right",
+                                          anchor_y="bottom") 
 
-        self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-4, CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-4, TIMER_BAR_WIDTH+4, TIMER_BAR_HEIGHT+4, color=(255, 255, 255))
-        self.timer_inside = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-3, CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-3, TIMER_BAR_WIDTH+2, TIMER_BAR_HEIGHT+2, color=(0, 0, 0))
-        self.timer_bar = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-2, CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-2, TIMER_BAR_WIDTH, TIMER_BAR_HEIGHT, color=(255, 255, 255))
+        self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-4,
+                                                 CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-4,
+                                                 TIMER_BAR_WIDTH+4,
+                                                 TIMER_BAR_HEIGHT+4,
+                                                 color=(255, 255, 255))
+        self.timer_inside = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-3,
+                                                CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-3,
+                                                TIMER_BAR_WIDTH+2,
+                                                TIMER_BAR_HEIGHT+2,
+                                                color=(0, 0, 0))
+        self.timer_bar = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-2,
+                                             CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-2,
+                                             TIMER_BAR_WIDTH,
+                                             TIMER_BAR_HEIGHT,
+                                             color=(255, 255, 255))
 
     def on_draw(self):
         global step
@@ -219,7 +307,8 @@ class ControlWindow(pg.window.Window):
         else:
             self.current_title_label.color = (255, 255, 255, 255)
 
-        if title_revealed and artist_revealed and step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter qu'une fois
+        if title_revealed and artist_revealed and step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
+                                                                          # qu'une fois
             step = STEP_REVEALED
             if chosen_pause_during_answers:
                 player.play()
@@ -301,13 +390,44 @@ class ControlWindow(pg.window.Window):
 
 class DisplayWindow(pg.window.Window):
     def __init__(self):
-        super(DisplayWindow, self).__init__(DISPLAY_WINDOW_WIDTH, DISPLAY_WINDOW_HEIGHT, resizable=True, caption="Blind - Afficheur")
+        super(DisplayWindow, self).__init__(DISPLAY_WINDOW_WIDTH,
+                                            DISPLAY_WINDOW_HEIGHT,
+                                            resizable=True,
+                                            caption="Blind - Afficheur")
         self.set_location(50,50)
         self.background = background_image
-        self.current_artist_label = pg.text.Label("Artiste", font_name=DISPLAY_WINDOW_FONT, font_size=0, x=0, y=0, anchor_x="left", anchor_y="bottom", color=(0,0,0,255))
-        self.current_title_label = pg.text.Label("Titre", font_name=DISPLAY_WINDOW_FONT, font_size=0, x=0, y=0, anchor_x="left", anchor_y="bottom", color=(0,0,0,255))
-        self.artist_found_by_label = pg.text.Label("", font_name=DISPLAY_WINDOW_FONT, font_size=0, x=0, y=0, anchor_x="left", anchor_y="bottom", color=(0,100,0,255))
-        self.title_found_by_label = pg.text.Label("", font_name=DISPLAY_WINDOW_FONT, font_size=0, x=0, y=0, anchor_x="left", anchor_y="bottom", color=(0,100,0,255))
+        self.current_artist_label = pg.text.Label("Artiste",
+                                                  font_name=DISPLAY_WINDOW_FONT,
+                                                  font_size=0,
+                                                  x=0,
+                                                  y=0,
+                                                  anchor_x="left",
+                                                  anchor_y="bottom",
+                                                  color=(0,0,0,255))
+        self.current_title_label = pg.text.Label("Titre",
+                                                 font_name=DISPLAY_WINDOW_FONT,
+                                                 font_size=0,
+                                                 x=0,
+                                                 y=0,
+                                                 anchor_x="left",
+                                                 anchor_y="bottom",
+                                                 color=(0,0,0,255))
+        self.artist_found_by_label = pg.text.Label("",
+                                                   font_name=DISPLAY_WINDOW_FONT,
+                                                   font_size=0,
+                                                   x=0,
+                                                   y=0,
+                                                   anchor_x="left",
+                                                   anchor_y="bottom",
+                                                   color=(0,100,0,255))
+        self.title_found_by_label = pg.text.Label("",
+                                                  font_name=DISPLAY_WINDOW_FONT,
+                                                  font_size=0,
+                                                  x=0,
+                                                  y=0,
+                                                  anchor_x="left",
+                                                  anchor_y="bottom",
+                                                  color=(0,100,0,255))
         self.timer_bar = pg.shapes.Rectangle(0, 0, 0, 0, color=(0,0,0))
 
     def on_draw(self):
@@ -353,8 +473,12 @@ class DisplayWindow(pg.window.Window):
         self.current_artist_label.draw()
         self.current_title_label.draw()
 
-        self.artist_found_by_label.x = self.current_artist_label.x + self.current_artist_label.content_width + self.width*0.02
-        self.title_found_by_label.x = self.current_title_label.x + self.current_title_label.content_width + self.width*0.02
+        self.artist_found_by_label.x = (self.current_artist_label.x +
+                                        self.current_artist_label.content_width +
+                                        self.width*0.02)
+        self.title_found_by_label.x = (self.current_title_label.x +
+                                       self.current_title_label.content_width +
+                                       self.width*0.02)
         self.artist_found_by_label.y = self.current_artist_label.y + self.height*0.02
         self.title_found_by_label.y = self.current_title_label.y + self.height*0.02
         self.artist_found_by_label.draw()
@@ -464,12 +588,30 @@ def check():
     pg.app.run()
 
 @cli.command()
-@click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt", help="Playlist file.")
-@click.option("--teams-file", type=click.Path(exists=True), default="teams.txt", help="Teams file.")
-@click.option("--answer-timer-duration", type=int, default=DEFAULT_ANSWER_TIMER_DURATION, help="How fast a player must answer after buzzing (in seconds).")
-@click.option("--retry-mode", type=click.Choice(["strict", "alternating", "timer"]), default=("strict", "alternating", "timer")[DEFAULT_RETRY_MODE], help="Strict: a player can buzz once per track. Alternating: a player can buzz multiple times, but not in a row. Timer: a player can buzz again, a few seconds after the track was resumed.")
-@click.option("--retry-timer-duration", type=int, default=DEFAULT_RETRY_TIMER_DURATION, help="If --retry-mode is timer, the number of seconds to wait to buzz again.")
-@click.option("--pause-during-answers", is_flag=True, help="Pause tracks when someone is answering. Without this flag, the volume is lowered instead.")
+@click.option("--playlist-file",
+              type=click.Path(exists=True),
+              default="playlist.txt",
+              help="Playlist file.")
+@click.option("--teams-file",
+              type=click.Path(exists=True),
+              default="teams.txt",
+              help="Teams file.")
+@click.option("--answer-timer-duration",
+              type=int,
+              default=DEFAULT_ANSWER_TIMER_DURATION,
+              help="How fast a player must answer after buzzing (in seconds).")
+@click.option("--retry-mode",
+              type=click.Choice(["strict", "alternating", "timer"]),
+              default=("strict", "alternating", "timer")[DEFAULT_RETRY_MODE],
+              help="Strict: a player can buzz once per track. Alternating: a player can buzz multiple times, "
+                   "but not in a row. Timer: a player can buzz again, a few seconds after the track was resumed.")
+@click.option("--retry-timer-duration",
+              type=int,
+              default=DEFAULT_RETRY_TIMER_DURATION,
+              help="If --retry-mode is timer, the number of seconds to wait to buzz again.")
+@click.option("--pause-during-answers",
+              is_flag=True,
+              help="Pause tracks when someone is answering. Without this flag, the volume is lowered instead.")
 def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_timer_duration, pause_during_answers):
     """Play the game."""
     global joystick
