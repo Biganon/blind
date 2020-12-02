@@ -9,6 +9,7 @@ import subprocess
 import sys
 import youtube_dl
 from decimal import Decimal
+from time import time
 
 # Constantes
 ############
@@ -68,8 +69,8 @@ def make_quieter(dt):
     player = None
     step = STEP_IDLE
     pg.clock.unschedule(make_quieter)
-    for team in teams:
-        teams[team].can_buzz = True
+    for team in teams.values():
+        team.can_buzz = True
     artist_revealed = False
     title_revealed = False
     artist_found_by = None
@@ -424,6 +425,14 @@ class ControlWindow(pg.window.Window):
         elif symbol == pg.window.key.L:
             leaderboard_visible = not leaderboard_visible
             display_window.dispatch_event("on_draw")
+        elif symbol == pg.window.key.S:
+            output = ""
+            for team in teams.values():
+                output += f"{team.name}:{team.joystick}:{team.score}\n"
+            filename = f"teams_{int(time())}.txt"
+            with open(filename, "w") as f:
+                f.write(output)
+
         elif symbol in NUMBER_KEYS:
             number = NUMBER_KEYS.index(symbol) + 1
             try:
@@ -620,11 +629,12 @@ class DisplayWindow(pg.window.Window):
 ################
 
 class Team:
-    def __init__(self, name="NAME", score=0, number=0):
+    def __init__(self, name="NAME", score=0, number=0, joystick=0):
         self.name = name
         self.score = score
         self.can_buzz = True
         self.number = number
+        self.joystick = joystick
 
 class Track:
     def __init__(self, artist="ARTIST", title="TITLE", media=None, cover=None):
@@ -773,12 +783,12 @@ def play(playlist_file,
 
     for line in lines:
         fields = line.split(":")
-        team_name, team_id = fields[0], int(fields[1])
+        team_name, team_joystick = fields[0], int(fields[1])
         if len(fields) == 3:
             team_score = int(fields[2])
         else:
             team_score = 0
-        teams[team_id] = Team(name=team_name, score=team_score, number=len(teams)+1)
+        teams[team_joystick] = Team(name=team_name, score=team_score, number=len(teams)+1, joystick=team_joystick)
 
     with open(playlist_file, "r") as f:
         lines = f.read().splitlines()
@@ -825,8 +835,8 @@ def play(playlist_file,
             else:
                 player.volume = 0.1
             if chosen_retry_mode == RETRY_MODE_ALTERNATING:
-                for team in teams:
-                    teams[team].can_buzz = True
+                for team in teams.values():
+                    team.can_buzz = True
             last_team_to_buzz.can_buzz = False
     
     pg.app.run()
