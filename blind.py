@@ -55,7 +55,7 @@ NUMBER_KEYS = (pg.window.key._1, pg.window.key._2, pg.window.key._3, pg.window.k
 
 def make_quieter(dt):
     if state.player.volume > 0.01:
-        state.player.volume *= chosen_fadeout_factor
+        state.player.volume *= state.fadeout_factor
         return
 
     state.player.pause()
@@ -72,7 +72,7 @@ def make_quieter(dt):
 
 def reduce_answer_timer(dt):
 
-    unit = dt / chosen_answer_timer_duration
+    unit = dt / state.answer_timer_duration
 
     if state.timer > unit:
         state.timer -= unit
@@ -315,7 +315,7 @@ class ControlWindow(pg.window.Window):
         if state.get_track().title_revealed and state.get_track().artist_revealed and state.step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
                                                                                 # qu'une fois
             state.step = STEP_REVEALED
-            if chosen_pause_during_answers:
+            if state.pause_during_answers:
                 state.player.play()
             else:
                 state.player.volume = 1
@@ -371,12 +371,12 @@ class ControlWindow(pg.window.Window):
                     state.get_track().title_revealed = True
             elif state.step == STEP_ANSWERING:
                 state.step = STEP_PLAYING
-                if chosen_pause_during_answers:
+                if state.pause_during_answers:
                     state.player.play()
                 else:
                     state.player.volume = 1
-                if chosen_retry_mode == RETRY_MODE_TIMER:
-                    pg.clock.schedule_once(restore_buzzer, chosen_retry_timer_duration, team=last_team_to_buzz)
+                if state.retry_mode == RETRY_MODE_TIMER:
+                    pg.clock.schedule_once(restore_buzzer, state.retry_timer_duration, team=last_team_to_buzz)
                 reset_answer_timer()
             elif state.step == STEP_REVEALED:
                 reset_turn()
@@ -620,6 +620,12 @@ class State:
         self.timer = 1
         self.timer_running = False
 
+        self.answer_timer_duration = None
+        self.retry_mode = None
+        self.retry_timer_duration = None
+        self.pause_during_answers = None
+        self.fadeout_factor = None
+
     @property
     def joystick(self):
         if not self._joystick:
@@ -769,25 +775,21 @@ def play(playlist_file,
          pause_during_answers,
          fadeout_factor):
     """Play the game."""
-    global chosen_answer_timer_duration
-    global chosen_retry_mode
-    global chosen_retry_timer_duration
-    global chosen_pause_during_answers
-    global chosen_fadeout_factor
     global pitch
     global leaderboard_visible
     global display_window
-    
-    chosen_answer_timer_duration = answer_timer_duration
-    chosen_retry_mode = ("strict", "alternating", "timer").index(retry_mode)
-    chosen_retry_timer_duration = retry_timer_duration
-    chosen_pause_during_answers = pause_during_answers
-    chosen_fadeout_factor = fadeout_factor
+
     pitch = Decimal("1")
     leaderboard_visible = False
 
     global state
     state = State()
+
+    state.answer_timer_duration = answer_timer_duration
+    state.retry_mode = ("strict", "alternating", "timer").index(retry_mode)
+    state.retry_timer_duration = retry_timer_duration
+    state.pause_during_answers = pause_during_answers
+    state.fadeout_factor = fadeout_factor
 
     with open(teams_file, "r") as f:
         lines = f.read().splitlines()
@@ -836,11 +838,11 @@ def play(playlist_file,
                 return
             buzzer_fx.play()
             state.step = STEP_ANSWERING
-            if chosen_pause_during_answers:
+            if state.pause_during_answers:
                 state.player.pause()
             else:
                 state.player.volume = 0.1
-            if chosen_retry_mode == RETRY_MODE_ALTERNATING:
+            if state.retry_mode == RETRY_MODE_ALTERNATING:
                 for team in state.teams:
                     team.can_buzz = True
             last_team_to_buzz.can_buzz = False
