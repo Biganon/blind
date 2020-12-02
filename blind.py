@@ -280,6 +280,7 @@ class ControlWindow(pg.window.Window):
                                              TIMER_BAR_WIDTH,
                                              TIMER_BAR_HEIGHT,
                                              color=(255, 255, 255))
+        self.success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
 
     def on_draw(self):
         global step
@@ -416,12 +417,12 @@ class ControlWindow(pg.window.Window):
             last_team_to_buzz.score += 1
             title_revealed = True
             title_found_by = last_team_to_buzz
-            success_fx.play()
+            self.success_fx.play()
         elif symbol == pg.window.key.A and step == STEP_ANSWERING and not artist_revealed:
             last_team_to_buzz.score += 1
             artist_revealed = True
             artist_found_by = last_team_to_buzz
-            success_fx.play()
+            self.success_fx.play()
         elif symbol == pg.window.key.L:
             leaderboard_visible = not leaderboard_visible
             display_window.dispatch_event("on_draw")
@@ -475,7 +476,10 @@ class DisplayWindow(pg.window.Window):
                                             resizable=True,
                                             caption="Blind - Afficheur")
         self.set_location(50,50)
-        self.background = background_image
+
+        self.neutral_image = pg.image.load(os.path.join("assets", "images", NEUTRAL_IMAGE)).get_texture()
+        self.background_image = pg.image.load(os.path.join("assets", "images", BACKGROUND_IMAGE)).get_texture()
+
         self.current_artist_label = pg.text.Label("Artiste",
                                                   font_name=DISPLAY_WINDOW_FONT,
                                                   font_size=0,
@@ -529,19 +533,18 @@ class DisplayWindow(pg.window.Window):
 
     def on_draw(self):
         self.clear()
-        #self.background.draw()
-        self.background.blit(0,0,1)
+        self.background_image.blit(0,0,1)
 
         if step == STEP_REVEALED:
-            image = tracks[track_number].cover
+            self.cover_image = tracks[track_number].cover
         else:
-            image = neutral_image
-        image.width = self.height*0.7
-        image.height = image.width
-        image.anchor_x = image.width//2
-        image.anchor_y = image.height//2
-        image.x = self.width//2 # placé dans `image` artificiellement, utile pour dessiner la barre de timer
-        image.y = self.height*0.6
+            self.cover_image = self.neutral_image
+        self.cover_image.width = self.height*0.7
+        self.cover_image.height = self.cover_image.width
+        self.cover_image.anchor_x = self.cover_image.width//2
+        self.cover_image.anchor_y = self.cover_image.height//2
+        self.cover_image.x = self.width//2 # placé dans `image` artificiellement, utile pour dessiner la barre de timer
+        self.cover_image.y = self.height*0.6
 
         if artist_revealed:
             self.current_artist_label.text = tracks[track_number].artist
@@ -581,13 +584,13 @@ class DisplayWindow(pg.window.Window):
         self.artist_found_by_label.draw()
         self.title_found_by_label.draw()
 
-        self.timer_bar.x = image.x - image.width//2 - self.width*0.05
-        self.timer_bar.y = image.y - image.height//2
-        self.timer_bar.width = image.width + (2*self.width*0.05)
-        self.timer_bar.height = timer * image.height
+        self.timer_bar.x = self.cover_image.x - self.cover_image.width//2 - self.width*0.05
+        self.timer_bar.y = self.cover_image.y - self.cover_image.height//2
+        self.timer_bar.width = self.cover_image.width + (2*self.width*0.05)
+        self.timer_bar.height = timer * self.cover_image.height
         self.timer_bar.draw()
 
-        image.blit(image.x, image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
+        self.cover_image.blit(self.cover_image.x, self.cover_image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
 
         if player:
             self.music_sprite.visible = True
@@ -602,11 +605,11 @@ class DisplayWindow(pg.window.Window):
             scores_string = scores_string.strip()
             self.leaderboard_label.text = scores_string
 
-            self.background.blit(0,0,1)
+            self.background_image.blit(0,0,1)
             self.leaderboard_label.draw()
 
     def on_resize(self, width, height):
-        self.background.width, self.background.height = width, height
+        self.background_image.width, self.background_image.height = width, height
 
         self.current_artist_label.x = width*0.02
         self.current_title_label.x = width*0.02
@@ -758,9 +761,6 @@ def play(playlist_file,
     global title_found_by
     global timer
     global timer_running
-    global neutral_image
-    global background_image
-    global success_fx
     global chosen_answer_timer_duration
     global chosen_retry_mode
     global chosen_retry_timer_duration
@@ -769,7 +769,6 @@ def play(playlist_file,
     global pitch
     global leaderboard_visible
     global display_window
-    global music_sprite
     
     step = STEP_IDLE
     track_number = 0
@@ -816,10 +815,6 @@ def play(playlist_file,
         print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title}")
 
     buzzer_fx = pg.media.load(os.path.join("assets", "fx", BUZZER_FX), streaming=False)
-    success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
-
-    neutral_image = pg.image.load(os.path.join("assets", "images", NEUTRAL_IMAGE)).get_texture()
-    background_image = pg.image.load(os.path.join("assets", "images", BACKGROUND_IMAGE)).get_texture()
 
     tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
 
