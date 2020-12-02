@@ -279,7 +279,7 @@ class ControlWindow(pg.window.Window):
         self.next_title_label.text = next_track.title
 
         self.track_number_label.text = f"{state.track_number+1}/{len(state.tracks)}"
-        self.pitch_label.text = f"Pitch : {pitch}"
+        self.pitch_label.text = f"Pitch : {state.pitch}"
         if state.player:
             elapsed_seconds = int(state.player.time)
             elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
@@ -292,7 +292,7 @@ class ControlWindow(pg.window.Window):
         self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[state.step]
         
         if state.step == STEP_ANSWERING:
-            self.step_label.text += f" ({last_team_to_buzz.name})"
+            self.step_label.text += f" ({state.last_team_to_buzz.name})"
             if not state.timer_running: # pour éviter que le schedule_interval crée plusieurs intervalles.
                                         # Note : pas possible de se baser sur timer, car il est réduit dans
                                         # le callback, or le callback n'est pas appelé à t=0, mais à t=0.01,
@@ -349,14 +349,11 @@ class ControlWindow(pg.window.Window):
         self.dispatch_event("on_draw")
 
     def on_key_press(self, symbol, modifiers):
-        global pitch
-        global leaderboard_visible
-
         if symbol == pg.window.key.ENTER:
             if state.step == STEP_IDLE:
                 state.step = STEP_PLAYING
                 state.player = state.get_track().media.play()
-                state.player.pitch = float(pitch)
+                state.player.pitch = float(state.pitch)
                 if modifiers == 2: # ctrl appuyé : seek au hasard dans la piste
                     random_point = random.uniform(0.2, 0.8) # ni trop au début, ni trop à la fin
                     random_second = state.get_track().media.duration * random_point
@@ -376,24 +373,23 @@ class ControlWindow(pg.window.Window):
                 else:
                     state.player.volume = 1
                 if state.retry_mode == RETRY_MODE_TIMER:
-                    pg.clock.schedule_once(restore_buzzer, state.retry_timer_duration, team=last_team_to_buzz)
+                    pg.clock.schedule_once(restore_buzzer, state.retry_timer_duration, team=state.last_team_to_buzz)
                 reset_answer_timer()
             elif state.step == STEP_REVEALED:
                 reset_turn()
 
         elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.get_track().title_revealed:
-            last_team_to_buzz.score += 1
+            state.last_team_to_buzz.score += 1
             state.get_track().title_revealed = True
-            state.get_track().title_found_by = last_team_to_buzz
+            state.get_track().title_found_by = state.last_team_to_buzz
             self.success_fx.play()
         elif symbol == pg.window.key.A and state.step == STEP_ANSWERING and not state.get_track().artist_revealed:
-            last_team_to_buzz.score += 1
+            state.last_team_to_buzz.score += 1
             state.get_track().artist_revealed = True
-            state.get_track().artist_found_by = last_team_to_buzz
+            state.get_track().artist_found_by = state.last_team_to_buzz
             self.success_fx.play()
         elif symbol == pg.window.key.L:
-            leaderboard_visible = not leaderboard_visible
-            display_window.dispatch_event("on_draw")
+            state.leaderboard_visible = not state.leaderboard_visible
         elif symbol == pg.window.key.S:
             output = ""
             for team in state.teams:
@@ -414,17 +410,16 @@ class ControlWindow(pg.window.Window):
                 pass
 
     def on_text(self, text):
-        global pitch
         if text == ".":
-            pitch += Decimal("0.1")
+            state.pitch += Decimal("0.1")
             if state.player:
-                state.player.pitch = float(pitch)
+                state.player.pitch = float(state.pitch)
         elif text == ",":
-            if pitch <= 0.1:
+            if state.pitch <= 0.1:
                 return
-            pitch -= Decimal("0.1")
+            state.pitch -= Decimal("0.1")
             if state.player:
-                state.player.pitch = float(pitch)
+                state.player.pitch = float(state.pitch)
 
     def on_text_motion(self, motion):
         if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE and state.track_number > 0:
@@ -565,7 +560,7 @@ class DisplayWindow(pg.window.Window):
             self.music_sprite.visible = False            
         self.music_sprite.draw()
 
-        if leaderboard_visible:
+        if state.leaderboard_visible:
             scores_string = ""
             for team in state.teams:
                 scores_string += f"{team.name} : {str(team.score)}\n"
@@ -619,6 +614,9 @@ class State:
         self.player = None
         self.timer = 1
         self.timer_running = False
+        self.pitch = Decimal("1")
+        self.leaderboard_visible = False
+        self.last_team_to_buzz = None
 
         self.answer_timer_duration = None
         self.retry_mode = None
@@ -716,7 +714,6 @@ def download(playlist_file):
 def check():
     """Discover what button triggers what code, visually."""
     button_check_window = ButtonCheckWindow()
-    state = State()
 
     @state.joystick.event
     def on_joybutton_press(joystick, button):
@@ -775,15 +772,6 @@ def play(playlist_file,
          pause_during_answers,
          fadeout_factor):
     """Play the game."""
-    global pitch
-    global leaderboard_visible
-    global display_window
-
-    pitch = Decimal("1")
-    leaderboard_visible = False
-
-    global state
-    state = State()
 
     state.answer_timer_duration = answer_timer_duration
     state.retry_mode = ("strict", "alternating", "timer").index(retry_mode)
@@ -824,7 +812,6 @@ def play(playlist_file,
 
     @state.joystick.event
     def on_joybutton_press(joystick, button_id):
-        global last_team_to_buzz
 
         if state.step == STEP_PLAYING:
             try:
@@ -833,7 +820,7 @@ def play(playlist_file,
             except KeyError:
                 return
             if team_trying_to_buzz.can_buzz:
-                last_team_to_buzz = team_trying_to_buzz
+                state.last_team_to_buzz = team_trying_to_buzz
             else:
                 return
             buzzer_fx.play()
@@ -845,7 +832,7 @@ def play(playlist_file,
             if state.retry_mode == RETRY_MODE_ALTERNATING:
                 for team in state.teams:
                     team.can_buzz = True
-            last_team_to_buzz.can_buzz = False
+            state.last_team_to_buzz.can_buzz = False
     
     pg.app.run()
 
@@ -853,4 +840,5 @@ def play(playlist_file,
 ######################
 
 if __name__ == "__main__":
+    state = State()
     cli()
