@@ -2,6 +2,7 @@ import click
 import coverpy
 import os
 import pyglet as pg
+import random
 import re
 import requests
 import subprocess
@@ -384,6 +385,11 @@ class ControlWindow(pg.window.Window):
                 step = STEP_PLAYING
                 player = tracks[track_number].media.play()
                 player.pitch = float(pitch)
+                if modifiers == 1: # shift appuyé : seek au hasard dans la piste
+                    random_point = random.uniform(0.2, 0.8) # ni trop au début, ni trop à la fin
+                    random_second = tracks[track_number].media.duration * random_point
+                    player.seek(random_second)
+
             elif step == STEP_PLAYING:
                 if modifiers == 1: # shift appuyé : repasse en mode idle, sans révéler
                     reset_turn()
