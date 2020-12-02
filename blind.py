@@ -54,26 +54,20 @@ NUMBER_KEYS = (pg.window.key._1, pg.window.key._2, pg.window.key._3, pg.window.k
 ###########
 
 def make_quieter(dt):
-    global player
-    global artist_revealed
-    global title_revealed
-    global artist_found_by
-    global title_found_by
-
-    if player.volume > 0.01:
-        player.volume *= chosen_fadeout_factor
+    if state.player.volume > 0.01:
+        state.player.volume *= chosen_fadeout_factor
         return
 
-    player.pause()
-    player = None
+    state.player.pause()
+    state.player = None
     state.step = STEP_IDLE
     pg.clock.unschedule(make_quieter)
     for team in state.teams:
         team.can_buzz = True
-    artist_revealed = False
-    title_revealed = False
-    artist_found_by = None
-    title_found_by = None
+    state.get_track().artist_revealed = False
+    state.get_track().title_revealed = False
+    state.get_track().artist_found_by = None
+    state.get_track().title_found_by = None
     reset_answer_timer()
 
 def reduce_answer_timer(dt):
@@ -273,7 +267,6 @@ class ControlWindow(pg.window.Window):
         self.success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
 
     def on_draw(self):
-        global player
         global timer_running
 
         self.clear()
@@ -292,8 +285,8 @@ class ControlWindow(pg.window.Window):
 
         self.track_number_label.text = f"{state.track_number+1}/{len(state.tracks)}"
         self.pitch_label.text = f"Pitch : {pitch}"
-        if player:
-            elapsed_seconds = int(player.time)
+        if state.player:
+            elapsed_seconds = int(state.player.time)
             elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
             total_seconds = int(state.get_track().media.duration)
             total_minsec = f"{(total_seconds // 60):02}:{(total_seconds % 60):02}"
@@ -311,23 +304,23 @@ class ControlWindow(pg.window.Window):
 
         self.timer_bar.width = timer * TIMER_BAR_WIDTH
 
-        if artist_revealed:
+        if state.get_track().artist_revealed:
             self.current_artist_label.color = (0, 255, 0, 255)
         else:
             self.current_artist_label.color = (255, 255, 255, 255)
         
-        if title_revealed:
+        if state.get_track().title_revealed:
             self.current_title_label.color = (0, 255, 0, 255)
         else:
             self.current_title_label.color = (255, 255, 255, 255)
 
-        if title_revealed and artist_revealed and state.step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
+        if state.get_track().title_revealed and state.get_track().artist_revealed and state.step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
                                                                                 # qu'une fois
             state.step = STEP_REVEALED
             if chosen_pause_during_answers:
-                player.play()
+                state.player.play()
             else:
-                player.volume = 1
+                state.player.volume = 1
             # pg.clock.unschedule(reduce_answer_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
 
         scores_string = ""
@@ -358,52 +351,47 @@ class ControlWindow(pg.window.Window):
         self.dispatch_event("on_draw")
 
     def on_key_press(self, symbol, modifiers):
-        global player
-        global artist_revealed
-        global title_revealed
-        global artist_found_by
-        global title_found_by
         global pitch
         global leaderboard_visible
 
         if symbol == pg.window.key.ENTER:
             if state.step == STEP_IDLE:
                 state.step = STEP_PLAYING
-                player = state.get_track().media.play()
-                player.pitch = float(pitch)
+                state.player = state.get_track().media.play()
+                state.player.pitch = float(pitch)
                 if modifiers == 2: # ctrl appuyé : seek au hasard dans la piste
                     random_point = random.uniform(0.2, 0.8) # ni trop au début, ni trop à la fin
                     random_second = state.get_track().media.duration * random_point
-                    player.seek(random_second)
+                    state.player.seek(random_second)
 
             elif state.step == STEP_PLAYING:
                 if modifiers == 2: # ctrl appuyé : repasse en mode idle, sans révéler
                     reset_turn()
                 else: # sinon : révèle
                     state.step = STEP_REVEALED
-                    artist_revealed = True
-                    title_revealed = True
+                    state.get_track().artist_revealed = True
+                    state.get_track().title_revealed = True
             elif state.step == STEP_ANSWERING:
                 state.step = STEP_PLAYING
                 if chosen_pause_during_answers:
-                    player.play()
+                    state.player.play()
                 else:
-                    player.volume = 1
+                    state.player.volume = 1
                 if chosen_retry_mode == RETRY_MODE_TIMER:
                     pg.clock.schedule_once(restore_buzzer, chosen_retry_timer_duration, team=last_team_to_buzz)
                 reset_answer_timer()
             elif state.step == STEP_REVEALED:
                 reset_turn()
 
-        elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not title_revealed:
+        elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.get_track().title_revealed:
             last_team_to_buzz.score += 1
-            title_revealed = True
-            title_found_by = last_team_to_buzz
+            state.get_track().title_revealed = True
+            state.get_track().title_found_by = last_team_to_buzz
             self.success_fx.play()
-        elif symbol == pg.window.key.A and state.step == STEP_ANSWERING and not artist_revealed:
+        elif symbol == pg.window.key.A and state.step == STEP_ANSWERING and not state.get_track().artist_revealed:
             last_team_to_buzz.score += 1
-            artist_revealed = True
-            artist_found_by = last_team_to_buzz
+            state.get_track().artist_revealed = True
+            state.get_track().artist_found_by = last_team_to_buzz
             self.success_fx.play()
         elif symbol == pg.window.key.L:
             leaderboard_visible = not leaderboard_visible
@@ -431,24 +419,24 @@ class ControlWindow(pg.window.Window):
         global pitch
         if text == ".":
             pitch += Decimal("0.1")
-            if player:
-                player.pitch = float(pitch)
+            if state.player:
+                state.player.pitch = float(pitch)
         elif text == ",":
             if pitch <= 0.1:
                 return
             pitch -= Decimal("0.1")
-            if player:
-                player.pitch = float(pitch)
+            if state.player:
+                state.player.pitch = float(pitch)
 
     def on_text_motion(self, motion):
         if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE and state.track_number > 0:
             state.track_number -= 1
         elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE and state.track_number < len(state.tracks)-1:
             state.track_number += 1
-        elif motion == pg.window.key.MOTION_RIGHT and player:
-            player.seek(player.time + 1)
-        elif motion == pg.window.key.MOTION_LEFT and player:
-            player.seek(player.time - 1)
+        elif motion == pg.window.key.MOTION_RIGHT and state.player:
+            state.player.seek(state.player.time + 1)
+        elif motion == pg.window.key.MOTION_LEFT and state.player:
+            state.player.seek(state.player.time - 1)
 
 class DisplayWindow(pg.window.Window):
     def __init__(self):
@@ -527,27 +515,27 @@ class DisplayWindow(pg.window.Window):
         self.cover_image.x = self.width//2 # placé dans `image` artificiellement, utile pour dessiner la barre de timer
         self.cover_image.y = self.height*0.6
 
-        if artist_revealed:
+        if state.get_track().artist_revealed:
             self.current_artist_label.text = state.get_track().artist
             self.current_artist_label.color = (0,0,0,255)
         else:
             self.current_artist_label.text = "Artiste ?"
             self.current_artist_label.color = (100,100,100,255)
 
-        if title_revealed:
+        if state.get_track().title_revealed:
             self.current_title_label.text = state.get_track().title
             self.current_title_label.color = (0,0,0,255)
         else:
             self.current_title_label.text = "Titre ?"
             self.current_title_label.color = (100,100,100,255)
 
-        if artist_found_by:
-            self.artist_found_by_label.text = artist_found_by.name
+        if state.get_track().artist_found_by:
+            self.artist_found_by_label.text = state.get_track().artist_found_by.name
         else:
             self.artist_found_by_label.text = ""
 
-        if title_found_by:
-            self.title_found_by_label.text = title_found_by.name
+        if state.get_track().title_found_by:
+            self.title_found_by_label.text = state.get_track().title_found_by.name
         else:
             self.title_found_by_label.text = ""
 
@@ -573,7 +561,7 @@ class DisplayWindow(pg.window.Window):
 
         self.cover_image.blit(self.cover_image.x, self.cover_image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
 
-        if player:
+        if state.player:
             self.music_sprite.visible = True
         else:
             self.music_sprite.visible = False            
@@ -630,6 +618,7 @@ class State:
         self._teams = []
         self.tracks = []
         self.track_number = 0
+        self.player = None
 
     @property
     def joystick(self):
@@ -684,6 +673,10 @@ class Track:
         self.title = title
         self.media = media
         self.cover = cover
+        self.artist_revealed = False
+        self.title_revealed = False
+        self.artist_found_by = None
+        self.title_found_by = None
 
 # Sous-commandes, options et paramètres
 #######################################
@@ -776,11 +769,6 @@ def play(playlist_file,
          pause_during_answers,
          fadeout_factor):
     """Play the game."""
-    global player
-    global artist_revealed
-    global title_revealed
-    global artist_found_by
-    global title_found_by
     global timer
     global timer_running
     global chosen_answer_timer_duration
@@ -792,11 +780,6 @@ def play(playlist_file,
     global leaderboard_visible
     global display_window
     
-    player = None
-    artist_revealed = False
-    title_revealed = False
-    artist_found_by = None
-    title_found_by = None
     timer = 1 # va de 1 à 0
     timer_running = False
     chosen_answer_timer_duration = answer_timer_duration
@@ -858,9 +841,9 @@ def play(playlist_file,
             buzzer_fx.play()
             state.step = STEP_ANSWERING
             if chosen_pause_during_answers:
-                player.pause()
+                state.player.pause()
             else:
-                player.volume = 0.1
+                state.player.volume = 0.1
             if chosen_retry_mode == RETRY_MODE_ALTERNATING:
                 for team in state.teams:
                     team.can_buzz = True
