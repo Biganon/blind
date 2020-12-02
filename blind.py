@@ -522,6 +522,11 @@ class DisplayWindow(pg.window.Window):
                                                anchor_y="center",
                                                color=(0,0,0,255))
 
+        music_animation = pg.resource.animation(os.path.join("assets", "gifs", "skeleton2.gif"))
+        self.music_sprite = pg.sprite.Sprite(img=music_animation)
+        self.music_sprite.x = self.width - self.music_sprite.width
+        self.music_sprite.visible = False
+
     def on_draw(self):
         self.clear()
         #self.background.draw()
@@ -584,6 +589,12 @@ class DisplayWindow(pg.window.Window):
 
         image.blit(image.x, image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
 
+        if player:
+            self.music_sprite.visible = True
+        else:
+            self.music_sprite.visible = False            
+        self.music_sprite.draw()
+
         if leaderboard_visible:
             # rect = pg.shapes.Rectangle(0, 0, self.width, self.height, color=(255,0,0))
             # rect.draw()
@@ -613,6 +624,8 @@ class DisplayWindow(pg.window.Window):
         self.leaderboard_label.y = height*0.5
         self.leaderboard_label.font_size = height//15
         self.leaderboard_label.width = width*0.8
+
+        self.music_sprite.x = width - self.music_sprite.width
 
         super(DisplayWindow, self).on_resize(width, height) # https://stackoverflow.com/a/23276270/602339
 
@@ -758,6 +771,7 @@ def play(playlist_file,
     global pitch
     global leaderboard_visible
     global display_window
+    global music_sprite
     
     step = STEP_IDLE
     track_number = 0
