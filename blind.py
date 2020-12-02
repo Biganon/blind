@@ -59,7 +59,6 @@ def make_quieter(dt):
     global title_revealed
     global artist_found_by
     global title_found_by
-    global step
 
     if player.volume > 0.01:
         player.volume *= chosen_fadeout_factor
@@ -67,9 +66,9 @@ def make_quieter(dt):
 
     player.pause()
     player = None
-    step = STEP_IDLE
+    state.step = STEP_IDLE
     pg.clock.unschedule(make_quieter)
-    for team in teams.values():
+    for team in state.teams:
         team.can_buzz = True
     artist_revealed = False
     title_revealed = False
@@ -96,15 +95,6 @@ def restore_buzzer(dt, team):
 
 # Fonctions utilitaires
 #######################
-
-def open_joystick():
-    global joystick
-    joysticks = pg.input.get_joysticks()
-    if not joysticks:
-        print("Aucun joystick connecté")
-        sys.exit()
-    joystick = joysticks[0]
-    joystick.open()
 
 def reset_answer_timer():
     global timer
@@ -283,7 +273,6 @@ class ControlWindow(pg.window.Window):
         self.success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
 
     def on_draw(self):
-        global step
         global player
         global timer_running
 
@@ -317,9 +306,9 @@ class ControlWindow(pg.window.Window):
         else:
             self.seek_label.text = "- / -"
 
-        self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[step]
+        self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[state.step]
         
-        if step == STEP_ANSWERING:
+        if state.step == STEP_ANSWERING:
             self.step_label.text += f" ({last_team_to_buzz.name})"
             if not timer_running:
                 timer_running = True
@@ -337,9 +326,9 @@ class ControlWindow(pg.window.Window):
         else:
             self.current_title_label.color = (255, 255, 255, 255)
 
-        if title_revealed and artist_revealed and step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
-                                                                          # qu'une fois
-            step = STEP_REVEALED
+        if title_revealed and artist_revealed and state.step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
+                                                                                # qu'une fois
+            state.step = STEP_REVEALED
             if chosen_pause_during_answers:
                 player.play()
             else:
@@ -347,7 +336,7 @@ class ControlWindow(pg.window.Window):
             # pg.clock.unschedule(reduce_answer_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
 
         scores_string = ""
-        for team in sorted(teams.values(), key=lambda x:x.score, reverse=True):
+        for team in state.teams:
             scores_string += f"{team.name} ({team.number}) : {str(team.score).rjust(3)}\n"
         scores_string = scores_string.strip()
         self.scores_label.text = scores_string
@@ -374,7 +363,6 @@ class ControlWindow(pg.window.Window):
         self.dispatch_event("on_draw")
 
     def on_key_press(self, symbol, modifiers):
-        global step
         global track_number
         global player
         global artist_revealed
@@ -385,8 +373,8 @@ class ControlWindow(pg.window.Window):
         global leaderboard_visible
 
         if symbol == pg.window.key.ENTER:
-            if step == STEP_IDLE:
-                step = STEP_PLAYING
+            if state.step == STEP_IDLE:
+                state.step = STEP_PLAYING
                 player = tracks[track_number].media.play()
                 player.pitch = float(pitch)
                 if modifiers == 2: # ctrl appuyé : seek au hasard dans la piste
@@ -394,15 +382,15 @@ class ControlWindow(pg.window.Window):
                     random_second = tracks[track_number].media.duration * random_point
                     player.seek(random_second)
 
-            elif step == STEP_PLAYING:
+            elif state.step == STEP_PLAYING:
                 if modifiers == 2: # ctrl appuyé : repasse en mode idle, sans révéler
                     reset_turn()
                 else: # sinon : révèle
-                    step = STEP_REVEALED
+                    state.step = STEP_REVEALED
                     artist_revealed = True
                     title_revealed = True
-            elif step == STEP_ANSWERING:
-                step = STEP_PLAYING
+            elif state.step == STEP_ANSWERING:
+                state.step = STEP_PLAYING
                 if chosen_pause_during_answers:
                     player.play()
                 else:
@@ -410,15 +398,15 @@ class ControlWindow(pg.window.Window):
                 if chosen_retry_mode == RETRY_MODE_TIMER:
                     pg.clock.schedule_once(restore_buzzer, chosen_retry_timer_duration, team=last_team_to_buzz)
                 reset_answer_timer()
-            elif step == STEP_REVEALED:
+            elif state.step == STEP_REVEALED:
                 reset_turn()
 
-        elif symbol == pg.window.key.T and step == STEP_ANSWERING and not title_revealed:
+        elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not title_revealed:
             last_team_to_buzz.score += 1
             title_revealed = True
             title_found_by = last_team_to_buzz
             self.success_fx.play()
-        elif symbol == pg.window.key.A and step == STEP_ANSWERING and not artist_revealed:
+        elif symbol == pg.window.key.A and state.step == STEP_ANSWERING and not artist_revealed:
             last_team_to_buzz.score += 1
             artist_revealed = True
             artist_found_by = last_team_to_buzz
@@ -428,8 +416,8 @@ class ControlWindow(pg.window.Window):
             display_window.dispatch_event("on_draw")
         elif symbol == pg.window.key.S:
             output = ""
-            for team in teams.values():
-                output += f"{team.name}:{team.joystick}:{team.score}\n"
+            for team in state.teams:
+                output += f"{team.name}:{team.button_id}:{team.score}\n"
             filename = f"teams_{int(time())}.txt"
             with open(filename, "w") as f:
                 f.write(output)
@@ -437,7 +425,7 @@ class ControlWindow(pg.window.Window):
         elif symbol in NUMBER_KEYS:
             number = NUMBER_KEYS.index(symbol) + 1
             try:
-                team = next(team for team in teams.values() if team.number == number)
+                team = state.get_team_by_number(number)
                 if modifiers == 2:
                     team.score -= 1
                 else:
@@ -460,9 +448,9 @@ class ControlWindow(pg.window.Window):
 
     def on_text_motion(self, motion):
         global track_number
-        if motion == pg.window.key.MOTION_UP and step == STEP_IDLE and track_number > 0:
+        if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE and track_number > 0:
             track_number -= 1
-        elif motion == pg.window.key.MOTION_DOWN and step == STEP_IDLE and track_number < len(tracks)-1:
+        elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE and track_number < len(tracks)-1:
             track_number += 1
         elif motion == pg.window.key.MOTION_RIGHT and player:
             player.seek(player.time + 1)
@@ -535,7 +523,7 @@ class DisplayWindow(pg.window.Window):
         self.clear()
         self.background_image.blit(0,0,1)
 
-        if step == STEP_REVEALED:
+        if state.step == STEP_REVEALED:
             self.cover_image = tracks[track_number].cover
         else:
             self.cover_image = self.neutral_image
@@ -600,7 +588,7 @@ class DisplayWindow(pg.window.Window):
 
         if leaderboard_visible:
             scores_string = ""
-            for team in sorted(teams.values(), key=lambda x:x.score, reverse=True):
+            for team in state.teams:
                 scores_string += f"{team.name} : {str(team.score)}\n"
             scores_string = scores_string.strip()
             self.leaderboard_label.text = scores_string
@@ -642,13 +630,51 @@ class DisplayWindow(pg.window.Window):
 # Classes de jeu
 ################
 
+class State:
+    def __init__(self):
+        self.step = STEP_IDLE
+        self._joystick = None
+        self._teams = []
+
+    @property
+    def joystick(self):
+        if not self._joystick:
+            joysticks = pg.input.get_joysticks()
+            if not joysticks:
+                print("Aucun joystick connecté")
+                sys.exit()
+            self._joystick = joysticks[0]
+            self._joystick.open()
+        return self._joystick
+
+    @property
+    def teams(self):
+        return sorted(self._teams, key=lambda x: (-x.score, x.name))
+
+    def add_team(self, team):
+        team.number = len(self._teams) + 1
+        self._teams.append(team)
+
+    def get_team_by_button_id(self, button_id):
+        try:
+            team = next(team for team in self._teams if team.button_id == button_id)
+        except StopIteration:
+            team = None
+        return team
+
+    def get_team_by_number(self, number):
+        try:
+            team = next(team for team in self._teams if team.number == number)
+        except StopIteration:
+            team = None
+        return team
+
 class Team:
-    def __init__(self, name="NAME", score=0, number=0, joystick=0):
+    def __init__(self, name="NAME", score=0, button_id=0):
         self.name = name
         self.score = score
         self.can_buzz = True
-        self.number = number
-        self.joystick = joystick
+        self.button_id = button_id
 
 class Track:
     def __init__(self, artist="ARTIST", title="TITLE", media=None, cover=None):
@@ -688,11 +714,10 @@ def download(playlist_file):
 @cli.command()
 def check():
     """Discover what button triggers what code, visually."""
-    global joystick
-    open_joystick()
     button_check_window = ButtonCheckWindow()
+    state = State()
 
-    @joystick.event
+    @state.joystick.event
     def on_joybutton_press(joystick, button):
         # ici : convertir évent. le code reçu
         try:
@@ -701,7 +726,7 @@ def check():
             pass
         button_check_window.dispatch_event("on_draw")
 
-    @joystick.event
+    @state.joystick.event
     def on_joybutton_release(joystick, button):
         # ici : convertir évent. le code reçu
         try:
@@ -749,10 +774,7 @@ def play(playlist_file,
          pause_during_answers,
          fadeout_factor):
     """Play the game."""
-    global joystick
-    global teams 
     global tracks
-    global step
     global track_number
     global player
     global artist_revealed
@@ -770,7 +792,6 @@ def play(playlist_file,
     global leaderboard_visible
     global display_window
     
-    step = STEP_IDLE
     track_number = 0
     player = None
     artist_revealed = False
@@ -787,19 +808,20 @@ def play(playlist_file,
     pitch = Decimal("1")
     leaderboard_visible = False
 
-    open_joystick()
-    teams = {}
+    global state
+    state = State()
+
     with open(teams_file, "r") as f:
         lines = f.read().splitlines()
 
     for line in lines:
         fields = line.split(":")
-        team_name, team_joystick = fields[0], int(fields[1])
+        name, button_id = fields[0], int(fields[1])
         if len(fields) == 3:
-            team_score = int(fields[2])
+            score = int(fields[2])
         else:
-            team_score = 0
-        teams[team_joystick] = Team(name=team_name, score=team_score, number=len(teams)+1, joystick=team_joystick)
+            score = 0
+        state.add_team(Team(name=name, score=score, button_id=button_id))
 
     with open(playlist_file, "r") as f:
         lines = f.read().splitlines()
@@ -821,14 +843,14 @@ def play(playlist_file,
     control_window = ControlWindow()
     display_window = DisplayWindow()
 
-    @joystick.event
-    def on_joybutton_press(joystick, button):
-        global step
+    @state.joystick.event
+    def on_joybutton_press(joystick, button_id):
         global last_team_to_buzz
 
-        if step == STEP_PLAYING:
+        if state.step == STEP_PLAYING:
             try:
-                team_trying_to_buzz = teams[button]
+                team_trying_to_buzz = state.get_team_by_button_id(button_id)
+
             except KeyError:
                 return
             if team_trying_to_buzz.can_buzz:
@@ -836,13 +858,13 @@ def play(playlist_file,
             else:
                 return
             buzzer_fx.play()
-            step = STEP_ANSWERING
+            state.step = STEP_ANSWERING
             if chosen_pause_during_answers:
                 player.pause()
             else:
                 player.volume = 0.1
             if chosen_retry_mode == RETRY_MODE_ALTERNATING:
-                for team in teams.values():
+                for team in state.teams:
                     team.can_buzz = True
             last_team_to_buzz.can_buzz = False
     
