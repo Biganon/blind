@@ -342,8 +342,8 @@ class ControlWindow(pg.window.Window):
             # pg.clock.unschedule(reduce_answer_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
 
         scores_string = ""
-        for team in teams:
-            scores_string += f"{teams[team].name} : {str(teams[team].score).rjust(3)}\n"
+        for team in sorted(teams.values(), key=lambda x:x.score, reverse=True):
+            scores_string += f"{team.name} : {str(team.score).rjust(3)}\n"
         scores_string = scores_string.strip()
         self.scores_label.text = scores_string
 
