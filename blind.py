@@ -37,13 +37,12 @@ DISPLAY_WINDOW_WIDTH = 1200
 DISPLAY_WINDOW_HEIGHT = 900
 DISPLAY_WINDOW_PADDING = 40
 
-FADEOUT_FACTOR = 0.8
-
 BUZZER_FX = "buzzer2.wav"
 SUCCESS_FX = "success4.wav"
 NEUTRAL_IMAGE = "thinking2.png"
 BACKGROUND_IMAGE = "background1.png"
 
+DEFAULT_FADEOUT_FACTOR = 0.8
 DEFAULT_ANSWER_TIMER_DURATION = 3
 DEFAULT_RETRY_MODE = RETRY_MODE_STRICT
 DEFAULT_RETRY_TIMER_DURATION = 5
@@ -60,7 +59,7 @@ def make_quieter(dt):
     global step
 
     if player.volume > 0.01:
-        player.volume *= FADEOUT_FACTOR
+        player.volume *= chosen_fadeout_factor
         return
 
     player.pause()
@@ -668,7 +667,17 @@ def check():
 @click.option("--pause-during-answers",
               is_flag=True,
               help="Pause tracks when someone is answering. Without this flag, the volume is lowered instead.")
-def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_timer_duration, pause_during_answers):
+@click.option("--fadeout-factor",
+              type=float,
+              default=DEFAULT_FADEOUT_FACTOR,
+              help="Between 0 and 1, higher = longer fadeout, 0 = no fadeout.")
+def play(playlist_file,
+         teams_file,
+         answer_timer_duration,
+         retry_mode,
+         retry_timer_duration,
+         pause_during_answers,
+         fadeout_factor):
     """Play the game."""
     global joystick
     global teams 
@@ -689,6 +698,7 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     global chosen_retry_mode
     global chosen_retry_timer_duration
     global chosen_pause_during_answers
+    global chosen_fadeout_factor
     global pitch
     
     step = STEP_IDLE
@@ -704,6 +714,7 @@ def play(playlist_file, teams_file, answer_timer_duration, retry_mode, retry_tim
     chosen_retry_mode = ("strict", "alternating", "timer").index(retry_mode)
     chosen_retry_timer_duration = retry_timer_duration
     chosen_pause_during_answers = pause_during_answers
+    chosen_fadeout_factor = fadeout_factor
     pitch = Decimal("1")
 
     open_joystick()
