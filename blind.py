@@ -278,29 +278,24 @@ class ControlWindow(pg.window.Window):
 
         self.clear()
 
-        if track_number > 0:
-            self.previous_artist_label.text = tracks[track_number-1].artist
-            self.previous_title_label.text = tracks[track_number-1].title
-        else:
-            self.previous_artist_label.text = "---"
-            self.previous_title_label.text = "---"            
+        previous_track = state.get_track(-1)
+        self.previous_artist_label.text = previous_track.artist
+        self.previous_title_label.text = previous_track.title
 
-        self.current_artist_label.text = tracks[track_number].artist
-        self.current_title_label.text = tracks[track_number].title
+        current_track = state.get_track()
+        self.current_artist_label.text = current_track.artist
+        self.current_title_label.text = current_track.title
 
-        if track_number < len(tracks)-1:
-            self.next_artist_label.text = tracks[track_number+1].artist
-            self.next_title_label.text = tracks[track_number+1].title
-        else:
-            self.next_artist_label.text = "---"
-            self.next_title_label.text = "---"
+        next_track = state.get_track(+1)
+        self.next_artist_label.text = next_track.artist
+        self.next_title_label.text = next_track.title
 
-        self.track_number_label.text = f"{track_number+1}/{len(tracks)}"
+        self.track_number_label.text = f"{state.track_number+1}/{len(state.tracks)}"
         self.pitch_label.text = f"Pitch : {pitch}"
         if player:
             elapsed_seconds = int(player.time)
             elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
-            total_seconds = int(tracks[track_number].media.duration)
+            total_seconds = int(state.get_track().media.duration)
             total_minsec = f"{(total_seconds // 60):02}:{(total_seconds % 60):02}"
             self.seek_label.text = f"{elapsed_minsec:} / {total_minsec}"
         else:
@@ -363,7 +358,6 @@ class ControlWindow(pg.window.Window):
         self.dispatch_event("on_draw")
 
     def on_key_press(self, symbol, modifiers):
-        global track_number
         global player
         global artist_revealed
         global title_revealed
@@ -375,11 +369,11 @@ class ControlWindow(pg.window.Window):
         if symbol == pg.window.key.ENTER:
             if state.step == STEP_IDLE:
                 state.step = STEP_PLAYING
-                player = tracks[track_number].media.play()
+                player = state.get_track().media.play()
                 player.pitch = float(pitch)
                 if modifiers == 2: # ctrl appuyé : seek au hasard dans la piste
                     random_point = random.uniform(0.2, 0.8) # ni trop au début, ni trop à la fin
-                    random_second = tracks[track_number].media.duration * random_point
+                    random_second = state.get_track().media.duration * random_point
                     player.seek(random_second)
 
             elif state.step == STEP_PLAYING:
@@ -447,11 +441,10 @@ class ControlWindow(pg.window.Window):
                 player.pitch = float(pitch)
 
     def on_text_motion(self, motion):
-        global track_number
-        if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE and track_number > 0:
-            track_number -= 1
-        elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE and track_number < len(tracks)-1:
-            track_number += 1
+        if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE and state.track_number > 0:
+            state.track_number -= 1
+        elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE and state.track_number < len(state.tracks)-1:
+            state.track_number += 1
         elif motion == pg.window.key.MOTION_RIGHT and player:
             player.seek(player.time + 1)
         elif motion == pg.window.key.MOTION_LEFT and player:
@@ -524,7 +517,7 @@ class DisplayWindow(pg.window.Window):
         self.background_image.blit(0,0,1)
 
         if state.step == STEP_REVEALED:
-            self.cover_image = tracks[track_number].cover
+            self.cover_image = state.get_track().cover
         else:
             self.cover_image = self.neutral_image
         self.cover_image.width = self.height*0.7
@@ -535,14 +528,14 @@ class DisplayWindow(pg.window.Window):
         self.cover_image.y = self.height*0.6
 
         if artist_revealed:
-            self.current_artist_label.text = tracks[track_number].artist
+            self.current_artist_label.text = state.get_track().artist
             self.current_artist_label.color = (0,0,0,255)
         else:
             self.current_artist_label.text = "Artiste ?"
             self.current_artist_label.color = (100,100,100,255)
 
         if title_revealed:
-            self.current_title_label.text = tracks[track_number].title
+            self.current_title_label.text = state.get_track().title
             self.current_title_label.color = (0,0,0,255)
         else:
             self.current_title_label.text = "Titre ?"
@@ -635,6 +628,8 @@ class State:
         self.step = STEP_IDLE
         self._joystick = None
         self._teams = []
+        self.tracks = []
+        self.track_number = 0
 
     @property
     def joystick(self):
@@ -668,6 +663,13 @@ class State:
         except StopIteration:
             team = None
         return team
+
+    def get_track(self, offset=0):
+        requested_track_number = self.track_number + offset
+        if 0 <= requested_track_number < len(self.tracks):
+            return self.tracks[requested_track_number]
+        else:
+            return Track(artist="---", title="---")
 
 class Team:
     def __init__(self, name="NAME", score=0, button_id=0):
@@ -774,8 +776,6 @@ def play(playlist_file,
          pause_during_answers,
          fadeout_factor):
     """Play the game."""
-    global tracks
-    global track_number
     global player
     global artist_revealed
     global title_revealed
@@ -792,7 +792,6 @@ def play(playlist_file,
     global leaderboard_visible
     global display_window
     
-    track_number = 0
     player = None
     artist_revealed = False
     title_revealed = False
@@ -826,19 +825,18 @@ def play(playlist_file,
     with open(playlist_file, "r") as f:
         lines = f.read().splitlines()
 
-    tracks = []
-
     for idx, line in enumerate(lines):
-        track_artist, track_title = line.split(" - ")
-        track_media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
-        track_cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
-        track = Track(track_artist, track_title, track_media, track_cover)
-        tracks.append(track)
-        print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {track_artist} - {track_title}")
+        artist, title = line.split(" - ")
+        media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
+        cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
+        track = Track(artist, title, media, cover)
+        state.tracks.append(track)
+        print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {artist} - {title}")
 
     buzzer_fx = pg.media.load(os.path.join("assets", "fx", BUZZER_FX), streaming=False)
 
-    tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
+    if state.tracks:
+        state.tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
 
     control_window = ControlWindow()
     display_window = DisplayWindow()
