@@ -46,6 +46,9 @@ DEFAULT_ANSWER_TIMER_DURATION = 3
 DEFAULT_RETRY_MODE = RETRY_MODE_STRICT
 DEFAULT_RETRY_TIMER_DURATION = 5
 
+NUMBER_KEYS = (pg.window.key._1, pg.window.key._2, pg.window.key._3, pg.window.key._4, pg.window.key._5,
+              pg.window.key._6, pg.window.key._7, pg.window.key._8, pg.window.key._9)
+
 # Callbacks
 ###########
 
@@ -343,7 +346,7 @@ class ControlWindow(pg.window.Window):
 
         scores_string = ""
         for team in sorted(teams.values(), key=lambda x:x.score, reverse=True):
-            scores_string += f"{team.name} : {str(team.score).rjust(3)}\n"
+            scores_string += f"{team.name} ({team.number}) : {str(team.score).rjust(3)}\n"
         scores_string = scores_string.strip()
         self.scores_label.text = scores_string
 
@@ -384,13 +387,13 @@ class ControlWindow(pg.window.Window):
                 step = STEP_PLAYING
                 player = tracks[track_number].media.play()
                 player.pitch = float(pitch)
-                if modifiers == 1: # shift appuyé : seek au hasard dans la piste
+                if modifiers == 2: # ctrl appuyé : seek au hasard dans la piste
                     random_point = random.uniform(0.2, 0.8) # ni trop au début, ni trop à la fin
                     random_second = tracks[track_number].media.duration * random_point
                     player.seek(random_second)
 
             elif step == STEP_PLAYING:
-                if modifiers == 1: # shift appuyé : repasse en mode idle, sans révéler
+                if modifiers == 2: # ctrl appuyé : repasse en mode idle, sans révéler
                     reset_turn()
                 else: # sinon : révèle
                     step = STEP_REVEALED
@@ -421,6 +424,16 @@ class ControlWindow(pg.window.Window):
         elif symbol == pg.window.key.L:
             leaderboard_visible = not leaderboard_visible
             display_window.dispatch_event("on_draw")
+        elif symbol in NUMBER_KEYS:
+            number = NUMBER_KEYS.index(symbol) + 1
+            try:
+                team = next(team for team in teams.values() if team.number == number)
+                if modifiers == 2:
+                    team.score -= 1
+                else:
+                    team.score += 1
+            except StopIteration:
+                pass
 
     def on_text(self, text):
         global pitch
@@ -607,10 +620,11 @@ class DisplayWindow(pg.window.Window):
 ################
 
 class Team:
-    def __init__(self, name="NAME", score=0):
+    def __init__(self, name="NAME", score=0, number=0):
         self.name = name
         self.score = score
         self.can_buzz = True
+        self.number = number
 
 class Track:
     def __init__(self, artist="ARTIST", title="TITLE", media=None, cover=None):
@@ -764,7 +778,7 @@ def play(playlist_file,
             team_score = int(fields[2])
         else:
             team_score = 0
-        teams[team_id] = Team(team_name, team_score)
+        teams[team_id] = Team(name=team_name, score=team_score, number=len(teams)+1)
 
     with open(playlist_file, "r") as f:
         lines = f.read().splitlines()
