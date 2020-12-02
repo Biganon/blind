@@ -377,6 +377,7 @@ class ControlWindow(pg.window.Window):
         global artist_found_by
         global title_found_by
         global pitch
+        global leaderboard_visible
 
         if symbol == pg.window.key.ENTER:
             if step == STEP_IDLE:
@@ -417,6 +418,9 @@ class ControlWindow(pg.window.Window):
             artist_revealed = True
             artist_found_by = last_team_to_buzz
             success_fx.play()
+        elif symbol == pg.window.key.L:
+            leaderboard_visible = not leaderboard_visible
+            display_window.dispatch_event("on_draw")
 
     def on_text(self, text):
         global pitch
@@ -484,6 +488,18 @@ class DisplayWindow(pg.window.Window):
                                                   color=(0,100,0,255))
         self.timer_bar = pg.shapes.Rectangle(0, 0, 0, 0, color=(0,0,0))
 
+        self.leaderboard_label = pg.text.Label("Leaderboard",
+                                               font_name=DISPLAY_WINDOW_FONT,
+                                               font_size=0,
+                                               x=0,
+                                               y=0,
+                                               multiline=True,
+                                               width=100,
+                                               align="center",
+                                               anchor_x="center",
+                                               anchor_y="center",
+                                               color=(0,0,0,255))
+
     def on_draw(self):
         self.clear()
         #self.background.draw()
@@ -546,6 +562,18 @@ class DisplayWindow(pg.window.Window):
 
         image.blit(image.x, image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
 
+        if leaderboard_visible:
+            # rect = pg.shapes.Rectangle(0, 0, self.width, self.height, color=(255,0,0))
+            # rect.draw()
+            scores_string = ""
+            for team in sorted(teams.values(), key=lambda x:x.score, reverse=True):
+                scores_string += f"{team.name} : {str(team.score)}\n"
+            scores_string = scores_string.strip()
+            self.leaderboard_label.text = scores_string
+
+            self.background.blit(0,0,1)
+            self.leaderboard_label.draw()
+
     def on_resize(self, width, height):
         self.background.width, self.background.height = width, height
 
@@ -558,6 +586,11 @@ class DisplayWindow(pg.window.Window):
         
         self.artist_found_by_label.font_size = height//30
         self.title_found_by_label.font_size = height//30
+
+        self.leaderboard_label.x = width*0.5
+        self.leaderboard_label.y = height*0.5
+        self.leaderboard_label.font_size = height//15
+        self.leaderboard_label.width = width*0.8
 
         super(DisplayWindow, self).on_resize(width, height) # https://stackoverflow.com/a/23276270/602339
 
@@ -699,6 +732,8 @@ def play(playlist_file,
     global chosen_pause_during_answers
     global chosen_fadeout_factor
     global pitch
+    global leaderboard_visible
+    global display_window
     
     step = STEP_IDLE
     track_number = 0
@@ -715,6 +750,7 @@ def play(playlist_file,
     chosen_pause_during_answers = pause_during_answers
     chosen_fadeout_factor = fadeout_factor
     pitch = Decimal("1")
+    leaderboard_visible = False
 
     open_joystick()
     teams = {}
