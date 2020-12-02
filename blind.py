@@ -596,8 +596,6 @@ class DisplayWindow(pg.window.Window):
         self.music_sprite.draw()
 
         if leaderboard_visible:
-            # rect = pg.shapes.Rectangle(0, 0, self.width, self.height, color=(255,0,0))
-            # rect.draw()
             scores_string = ""
             for team in sorted(teams.values(), key=lambda x:x.score, reverse=True):
                 scores_string += f"{team.name} : {str(team.score)}\n"
