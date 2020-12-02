@@ -71,15 +71,14 @@ def make_quieter(dt):
     reset_answer_timer()
 
 def reduce_answer_timer(dt):
-    global timer
 
     unit = dt / chosen_answer_timer_duration
 
-    if timer > unit:
-        timer -= unit
+    if state.timer > unit:
+        state.timer -= unit
         return
 
-    timer = 0
+    state.timer = 0
 
     pg.clock.unschedule(reduce_answer_timer)
 
@@ -91,10 +90,8 @@ def restore_buzzer(dt, team):
 #######################
 
 def reset_answer_timer():
-    global timer
-    global timer_running
-    timer = 1
-    timer_running = False
+    state.timer = 1
+    state.timer_running = False
     pg.clock.unschedule(reduce_answer_timer)
 
 def reset_turn():
@@ -267,8 +264,6 @@ class ControlWindow(pg.window.Window):
         self.success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
 
     def on_draw(self):
-        global timer_running
-
         self.clear()
 
         previous_track = state.get_track(-1)
@@ -298,11 +293,14 @@ class ControlWindow(pg.window.Window):
         
         if state.step == STEP_ANSWERING:
             self.step_label.text += f" ({last_team_to_buzz.name})"
-            if not timer_running:
-                timer_running = True
+            if not state.timer_running: # pour éviter que le schedule_interval crée plusieurs intervalles.
+                                        # Note : pas possible de se baser sur timer, car il est réduit dans
+                                        # le callback, or le callback n'est pas appelé à t=0, mais à t=0.01,
+                                        # donc dans l'intervalle on_draw() peut s'exécuter plusieurs fois.
+                state.timer_running = True
                 pg.clock.schedule_interval(reduce_answer_timer, 0.01)
 
-        self.timer_bar.width = timer * TIMER_BAR_WIDTH
+        self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
         if state.get_track().artist_revealed:
             self.current_artist_label.color = (0, 255, 0, 255)
@@ -556,7 +554,7 @@ class DisplayWindow(pg.window.Window):
         self.timer_bar.x = self.cover_image.x - self.cover_image.width//2 - self.width*0.05
         self.timer_bar.y = self.cover_image.y - self.cover_image.height//2
         self.timer_bar.width = self.cover_image.width + (2*self.width*0.05)
-        self.timer_bar.height = timer * self.cover_image.height
+        self.timer_bar.height = state.timer * self.cover_image.height
         self.timer_bar.draw()
 
         self.cover_image.blit(self.cover_image.x, self.cover_image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
@@ -619,6 +617,8 @@ class State:
         self.tracks = []
         self.track_number = 0
         self.player = None
+        self.timer = 1
+        self.timer_running = False
 
     @property
     def joystick(self):
@@ -769,8 +769,6 @@ def play(playlist_file,
          pause_during_answers,
          fadeout_factor):
     """Play the game."""
-    global timer
-    global timer_running
     global chosen_answer_timer_duration
     global chosen_retry_mode
     global chosen_retry_timer_duration
@@ -780,8 +778,6 @@ def play(playlist_file,
     global leaderboard_visible
     global display_window
     
-    timer = 1 # va de 1 à 0
-    timer_running = False
     chosen_answer_timer_duration = answer_timer_duration
     chosen_retry_mode = ("strict", "alternating", "timer").index(retry_mode)
     chosen_retry_timer_duration = retry_timer_duration
