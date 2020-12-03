@@ -380,10 +380,10 @@ class ControlWindow(pg.window.Window):
                 state.player.pitch = float(state.pitch)
 
     def on_text_motion(self, motion):
-        if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE and state.track_number > 0:
-            state.track_number -= 1
-        elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE and state.track_number < len(state.tracks)-1:
-            state.track_number += 1
+        if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE:
+            state.shift_track_number(-1)
+        elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE:
+            state.shift_track_number(1)
         elif motion == pg.window.key.MOTION_RIGHT and state.player:
             state.player.seek(state.player.time + 1)
         elif motion == pg.window.key.MOTION_LEFT and state.player:
@@ -656,6 +656,11 @@ class State:
             return self.tracks[requested_track_number]
         else:
             return Track(artist="---", title="---")
+
+    def shift_track_number(self, offset=1):
+        requested_track_number = self.track_number + offset
+        if 0 <= requested_track_number < len(self.tracks):
+            self.track_number += offset
 
 class Team:
     def __init__(self, name="NAME", score=0, button_id=0):
