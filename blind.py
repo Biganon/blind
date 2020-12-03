@@ -94,7 +94,17 @@ def reset_answer_timer():
 def reset_track():
     pg.clock.schedule_interval(make_quieter, 0.1)
 
-def download_audio(track): 
+def download_audio(string=None, video_id=None, output_file=None):
+    if string and video_id:
+        print("Fournir une chaîne de recherche ou un id de vidéo, pas les deux.")
+        return
+    if string:
+        query = f"ytsearch:{string}"
+        output_file = os.path.join("tracks", f"{string}.mp3")
+    else:
+        query = f"https://www.youtube.com/watch?v={video_id}"
+        if not output_file:
+            output_file = os.path.join("tracks", f"manual_download_{video_id}.mp3")
     ydl_opts = {"outtmpl": r"temp_audio.%(ext)s",
                 "quiet": True,
                 "format": "bestaudio/best",
@@ -104,11 +114,11 @@ def download_audio(track):
                     "preferredquality": "320"
                 }]}
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([f"ytsearch:{track}"])
+        ydl.download([query])
 
     subprocess.run(["sox", 
                     "temp_audio.mp3",
-                    os.path.join("tracks", f"{track}.mp3"),
+                    output_file,
                     "silence",
                     "1",
                     "0.1",
@@ -689,8 +699,14 @@ def cli():
 
 @cli.command()
 @click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt", help="Playlist file.")
-def download(playlist_file):
+@click.option("--video-id", type=str, help="YouTube video ID (download and process one video only).")
+@click.option("--output-file", type=click.Path(), help="Output file (used only with --video-id).")
+def download(playlist_file, video_id, output_file):
     """Download songs and cover pictures."""
+    if video_id:
+        download_audio(video_id=video_id, output_file=output_file)
+        print("Piste téléchargée")
+        return
     with open(playlist_file, "r") as f:
         tracks = f.read().splitlines()
 
@@ -699,7 +715,7 @@ def download(playlist_file):
         print(f"Démarre '{track}'...")
 
         if not os.path.isfile(os.path.join("tracks", f"{track}.mp3")):
-            download_audio(track)
+            download_audio(string=track)
         else:
             print(f"Le fichier audio existe déjà, ignore.")
 
