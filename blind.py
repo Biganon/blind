@@ -655,7 +655,7 @@ class State:
         if 0 <= requested_track_number < len(self.tracks):
             return self.tracks[requested_track_number]
         else:
-            return Track(artist="---", title="---")
+            return None
 
     def shift_track_number(self, offset=1):
         requested_track_number = self.track_number + offset
