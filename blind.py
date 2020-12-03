@@ -65,11 +65,9 @@ def make_quieter(dt):
     pg.clock.unschedule(make_quieter)
     for team in state.teams:
         team.can_buzz = True
-    state.get_track().artist_revealed = False
-    state.get_track().title_revealed = False
-    state.get_track().artist_found_by = None
-    state.get_track().title_found_by = None
-    reset_answer_timer()
+
+    #state.shift_track_number(1)
+    #reset_answer_timer() # <- utilité ?
 
 def reduce_answer_timer(dt):
     unit = dt / state.answer_timer_duration
@@ -513,12 +511,15 @@ class DisplayWindow(pg.window.Window):
         self.clear()
         self.background_image.blit(0,0,1)
 
-        if state.step == STEP_REVEALED:
-            self.cover_image = state.get_track().cover
-        elif state.step == STEP_ANSWERING:
+        track = state.get_track()
+
+        if state.step == STEP_ANSWERING:
             self.cover_image = self.buzzer_image
+        elif track.artist_revealed and track.title_revealed:
+            self.cover_image = track.cover
         else:
             self.cover_image = self.neutral_image
+
         self.cover_image.width = self.height*0.7
         self.cover_image.height = self.cover_image.width
         self.cover_image.anchor_x = self.cover_image.width//2
