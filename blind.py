@@ -327,11 +327,6 @@ class ControlWindow(pg.window.Window):
                     state.player.seek(random_second)
 
             elif state.step == STEP_PLAYING:
-                if modifiers == 2: # ctrl appuyé : révèle (sécurité pour éviter les accidents)
-                    state.step = STEP_REVEALED
-                    state.get_track().artist_revealed = True
-                    state.get_track().title_revealed = True
-                else: # sinon : repasse simplement en mode Idle
                     reset_track()
             elif state.step == STEP_ANSWERING:
                 state.step = STEP_PLAYING
@@ -344,7 +339,9 @@ class ControlWindow(pg.window.Window):
                 reset_answer_timer()
             elif state.step == STEP_REVEALED:
                 reset_track()
-
+        elif symbol == pg.window.key.R:
+            state.get_track().artist_revealed = True
+            state.get_track().title_revealed = True
         elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.get_track().title_revealed:
             state.last_team_to_buzz.score += 1
             state.get_track().title_revealed = True
