@@ -254,7 +254,10 @@ class ControlWindow(pg.window.Window):
                     mark_title = "-"
                 else:
                     mark_title = " "                    
-                output += f"{cursor} [{mark_artist}][{mark_title}] {track.artist} - {track.title}\n"
+                line = f"{cursor} [{mark_artist}][{mark_title}] {track.artist} - {track.title}"
+                if len(line) > 59:
+                    line = line[:58]+"…"
+                output += f"{line}\n"
             else:
                 output += "\n"
 
