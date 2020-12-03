@@ -159,52 +159,16 @@ class ControlWindow(pg.window.Window):
                                             CONTROL_WINDOW_HEIGHT,
                                             caption="Blind - Contrôleur")
 
-        self.previous_artist_label = pg.text.Label("Artiste",
-                                                   font_name=CONTROL_WINDOW_FONT,
-                                                   font_size=CONTROL_WINDOW_FONT_SIZE,
-                                                   x=self.width//2,
-                                                   y=TRACKS_CENTER+55,
-                                                   anchor_x="center",
-                                                   anchor_y="center",
-                                                   color=(100, 100, 100, 255))
-        self.previous_title_label = pg.text.Label("Titre",
-                                                  font_name=CONTROL_WINDOW_FONT,
-                                                  font_size=CONTROL_WINDOW_FONT_SIZE,
-                                                  x=self.width//2,
-                                                  y=TRACKS_CENTER+35,
-                                                  anchor_x="center",
-                                                  anchor_y="center",
-                                                  color=(100, 100, 100, 255))
-        self.current_artist_label = pg.text.Label("Artiste",
-                                                  font_name=CONTROL_WINDOW_FONT,
-                                                  font_size=CONTROL_WINDOW_FONT_SIZE,
-                                                  x=self.width//2,
-                                                  y=TRACKS_CENTER+10,
-                                                  anchor_x="center",
-                                                  anchor_y="center")
-        self.current_title_label = pg.text.Label("Titre",
-                                                 font_name=CONTROL_WINDOW_FONT,
-                                                 font_size=CONTROL_WINDOW_FONT_SIZE,
-                                                 x=self.width//2,
-                                                 y=TRACKS_CENTER-10,
-                                                 anchor_x="center",
-                                                 anchor_y="center")
-        self.next_artist_label = pg.text.Label("Artiste",
-                                               font_name=CONTROL_WINDOW_FONT,
-                                               font_size=CONTROL_WINDOW_FONT_SIZE,
-                                               x=self.width//2,
-                                               y=TRACKS_CENTER-35,
-                                               anchor_x="center",
-                                               anchor_y="center",
-                                               color=(100, 100, 100, 255))
-        self.next_title_label = pg.text.Label("Titre",
-                                              font_name=CONTROL_WINDOW_FONT,
-                                              font_size=CONTROL_WINDOW_FONT_SIZE,
-                                              x=self.width//2,
-                                              y=TRACKS_CENTER-55,
-                                              anchor_x="center",
-                                              anchor_y="center",
-                                              color=(100, 100, 100, 255))
+        self.playlist_label = pg.text.Label("Playlist\nCoucou",
+                                            font_name=CONTROL_WINDOW_FONT,
+                                            font_size=CONTROL_WINDOW_FONT_SIZE*0.8,
+                                            anchor_x="left",
+                                            anchor_y="top",
+                                            x=220,
+                                            y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
+                                            multiline=True,
+                                            width=2000)
+
         self.track_number_label = pg.text.Label("Numéro",
                                                 font_name=CONTROL_WINDOW_FONT,
                                                 font_size=CONTROL_WINDOW_FONT_SIZE,
@@ -264,17 +228,28 @@ class ControlWindow(pg.window.Window):
     def on_draw(self):
         self.clear()
 
-        previous_track = state.get_track(-1)
-        self.previous_artist_label.text = previous_track.artist
-        self.previous_title_label.text = previous_track.title
+        output = ""
+        for offset in range(-2,15):
+            track = state.get_track(offset=offset)
+            if track:
+                cursor = '>' if offset == 0 else ' '
+                if track.artist_revealed and track.artist_found_by:
+                    mark_artist = str(track.artist_found_by.number)
+                elif track.artist_revealed:
+                    mark_artist = "-"
+                else:
+                    mark_artist = " "
+                if track.title_revealed and track.title_found_by:
+                    mark_title = str(track.title_found_by.number)
+                elif track.title_revealed:
+                    mark_title = "-"
+                else:
+                    mark_title = " "                    
+                output += f"{cursor} [{mark_artist}][{mark_title}] {track.artist} - {track.title}\n"
+            else:
+                output += "\n"
 
-        current_track = state.get_track()
-        self.current_artist_label.text = current_track.artist
-        self.current_title_label.text = current_track.title
-
-        next_track = state.get_track(+1)
-        self.next_artist_label.text = next_track.artist
-        self.next_title_label.text = next_track.title
+        self.playlist_label.text = output
 
         self.track_number_label.text = f"{state.track_number+1}/{len(state.tracks)}"
         self.pitch_label.text = f"Pitch : {state.pitch}"
@@ -300,18 +275,8 @@ class ControlWindow(pg.window.Window):
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
-        if state.get_track().artist_revealed:
-            self.current_artist_label.color = (0, 255, 0, 255)
-        else:
-            self.current_artist_label.color = (255, 255, 255, 255)
-        
-        if state.get_track().title_revealed:
-            self.current_title_label.color = (0, 255, 0, 255)
-        else:
-            self.current_title_label.color = (255, 255, 255, 255)
-
         if state.get_track().title_revealed and state.get_track().artist_revealed and state.step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
-                                                                                # qu'une fois
+                                                                                                                    # qu'une fois
             state.step = STEP_REVEALED
             if state.pause_during_answers:
                 state.player.play()
@@ -325,12 +290,7 @@ class ControlWindow(pg.window.Window):
         scores_string = scores_string.strip()
         self.scores_label.text = scores_string
 
-        self.previous_artist_label.draw()
-        self.previous_title_label.draw()
-        self.current_artist_label.draw()
-        self.current_title_label.draw()
-        self.next_artist_label.draw()
-        self.next_title_label.draw()
+        self.playlist_label.draw()
         self.track_number_label.draw()
         self.pitch_label.draw()
         self.seek_label.draw()
