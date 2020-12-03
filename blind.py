@@ -92,7 +92,7 @@ def reset_answer_timer():
     state.timer_running = False
     pg.clock.unschedule(reduce_answer_timer)
 
-def reset_turn():
+def reset_track():
     pg.clock.schedule_interval(make_quieter, 0.1)
 
 def download_audio(track): 
@@ -374,7 +374,7 @@ class ControlWindow(pg.window.Window):
                     pg.clock.schedule_once(restore_buzzer, state.retry_timer_duration, team=state.last_team_to_buzz)
                 reset_answer_timer()
             elif state.step == STEP_REVEALED:
-                reset_turn()
+                reset_track()
 
         elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.get_track().title_revealed:
             state.last_team_to_buzz.score += 1
