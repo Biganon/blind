@@ -487,27 +487,27 @@ class DisplayWindow(pg.window.Window):
         self.cover_image.x = self.width//2 # placé dans `image` artificiellement, utile pour dessiner la barre de timer
         self.cover_image.y = self.height*0.6
 
-        if state.get_track().artist_revealed:
-            self.current_artist_label.text = state.get_track().artist
+        if track.artist_revealed:
+            self.current_artist_label.text = track.artist
             self.current_artist_label.color = (0,0,0,255)
         else:
             self.current_artist_label.text = "Artiste ?"
             self.current_artist_label.color = (100,100,100,255)
 
-        if state.get_track().title_revealed:
-            self.current_title_label.text = state.get_track().title
+        if track.title_revealed:
+            self.current_title_label.text = track.title
             self.current_title_label.color = (0,0,0,255)
         else:
             self.current_title_label.text = "Titre ?"
             self.current_title_label.color = (100,100,100,255)
 
-        if state.get_track().artist_found_by:
-            self.artist_found_by_label.text = state.get_track().artist_found_by.name
+        if track.artist_found_by:
+            self.artist_found_by_label.text = track.artist_found_by.name
         else:
             self.artist_found_by_label.text = ""
 
-        if state.get_track().title_found_by:
-            self.title_found_by_label.text = state.get_track().title_found_by.name
+        if track.title_found_by:
+            self.title_found_by_label.text = track.title_found_by.name
         else:
             self.title_found_by_label.text = ""
 
