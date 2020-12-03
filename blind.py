@@ -41,7 +41,7 @@ BUZZER_FX = "buzzer2.wav"
 SUCCESS_FX = "success4.wav"
 NEUTRAL_IMAGE = "thinking2.png"
 BACKGROUND_IMAGE = "background1.png"
-BUZZER_IMAGE = "emergency.png"
+BUZZER_IMAGE = "emergency2.png"
 
 DEFAULT_FADEOUT_FACTOR = 0.8
 DEFAULT_ANSWER_TIMER_DURATION = 3
@@ -502,7 +502,7 @@ class DisplayWindow(pg.window.Window):
                                                   align="center",
                                                   anchor_x="center",
                                                   anchor_y="center",
-                                                  color=(0,0,0,255))
+                                                  color=(255,255,255,255))
 
         music_animation = pg.resource.animation(os.path.join("assets", "gifs", "skeleton2.gif"))
         self.music_sprite = pg.sprite.Sprite(img=music_animation)
