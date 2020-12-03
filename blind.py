@@ -275,8 +275,8 @@ class ControlWindow(pg.window.Window):
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
-        if state.get_track().title_revealed and state.get_track().artist_revealed and state.step == STEP_ANSWERING: # Dernier test : nécessaire pour n'exécuter
-                                                                                                                    # qu'une fois
+        if state.get_track().title_revealed and state.get_track().artist_revealed and state.step == STEP_ANSWERING:
+
             state.step = STEP_REVEALED
             if state.pause_during_answers:
                 state.player.play()
@@ -531,7 +531,8 @@ class DisplayWindow(pg.window.Window):
         self.timer_bar.height = state.timer * self.cover_image.height
         self.timer_bar.draw()
 
-        self.cover_image.blit(self.cover_image.x, self.cover_image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
+        self.cover_image.blit(self.cover_image.x, self.cover_image.y, 1) # blit tardif, pour qu'il ait lieu par dessus
+                                                                         # la barre de timer
 
         if state.step == STEP_ANSWERING:
             self.answering_team_label.text = state.last_team_to_buzz.name
