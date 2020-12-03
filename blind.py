@@ -28,8 +28,8 @@ RETRY_MODE_STRICT = 0
 RETRY_MODE_ALTERNATING = 1
 RETRY_MODE_TIMER = 2
 
-CONTROL_WINDOW_WIDTH = 800
-CONTROL_WINDOW_HEIGHT = 600
+CONTROL_WINDOW_WIDTH = 1200
+CONTROL_WINDOW_HEIGHT = 900
 CONTROL_WINDOW_PADDING = 20
 TRACKS_CENTER = CONTROL_WINDOW_HEIGHT - 100
 TIMER_BAR_WIDTH = 200
@@ -41,6 +41,7 @@ BUZZER_FX = "buzzer2.wav"
 SUCCESS_FX = "success4.wav"
 NEUTRAL_IMAGE = "thinking2.png"
 BACKGROUND_IMAGE = "background1.png"
+BUZZER_IMAGE = "emergency.png"
 
 DEFAULT_FADEOUT_FACTOR = 0.8
 DEFAULT_ANSWER_TIMER_DURATION = 3
@@ -71,7 +72,6 @@ def make_quieter(dt):
     reset_answer_timer()
 
 def reduce_answer_timer(dt):
-
     unit = dt / state.answer_timer_duration
 
     if state.timer > unit:
@@ -431,6 +431,9 @@ class ControlWindow(pg.window.Window):
         elif motion == pg.window.key.MOTION_LEFT and state.player:
             state.player.seek(state.player.time - 1)
 
+    def on_close(self):
+        sys.exit()
+
 class DisplayWindow(pg.window.Window):
     def __init__(self):
         super(DisplayWindow, self).__init__(DISPLAY_WINDOW_WIDTH,
@@ -441,6 +444,7 @@ class DisplayWindow(pg.window.Window):
 
         self.neutral_image = pg.image.load(os.path.join("assets", "images", NEUTRAL_IMAGE)).get_texture()
         self.background_image = pg.image.load(os.path.join("assets", "images", BACKGROUND_IMAGE)).get_texture()
+        self.buzzer_image = pg.image.load(os.path.join("assets", "images", BUZZER_IMAGE)).get_texture()
 
         self.current_artist_label = pg.text.Label("Artiste",
                                                   font_name=DISPLAY_WINDOW_FONT,
@@ -488,6 +492,18 @@ class DisplayWindow(pg.window.Window):
                                                anchor_y="center",
                                                color=(0,0,0,255))
 
+        self.answering_team_label = pg.text.Label("",
+                                                  font_name=DISPLAY_WINDOW_FONT,
+                                                  font_size=0,
+                                                  x=0,
+                                                  y=0,
+                                                  multiline=True,
+                                                  width=100,
+                                                  align="center",
+                                                  anchor_x="center",
+                                                  anchor_y="center",
+                                                  color=(0,0,0,255))
+
         music_animation = pg.resource.animation(os.path.join("assets", "gifs", "skeleton2.gif"))
         self.music_sprite = pg.sprite.Sprite(img=music_animation)
         self.music_sprite.x = self.width - self.music_sprite.width
@@ -499,6 +515,8 @@ class DisplayWindow(pg.window.Window):
 
         if state.step == STEP_REVEALED:
             self.cover_image = state.get_track().cover
+        elif state.step == STEP_ANSWERING:
+            self.cover_image = self.buzzer_image
         else:
             self.cover_image = self.neutral_image
         self.cover_image.width = self.height*0.7
@@ -554,12 +572,12 @@ class DisplayWindow(pg.window.Window):
 
         self.cover_image.blit(self.cover_image.x, self.cover_image.y, 1) # blit tardif, pour qu'il ait lieu par dessus la barre de timer
 
-        if state.player:
-            self.music_sprite.visible = True
+        if state.step == STEP_ANSWERING:
+            self.answering_team_label.text = state.last_team_to_buzz.name
         else:
-            self.music_sprite.visible = False            
-        self.music_sprite.draw()
-
+            self.answering_team_label.text = ""
+        self.answering_team_label.draw()
+        
         if state.leaderboard_visible:
             scores_string = ""
             for team in state.teams:
@@ -569,6 +587,12 @@ class DisplayWindow(pg.window.Window):
 
             self.background_image.blit(0,0,1)
             self.leaderboard_label.draw()
+
+        if state.player:
+            self.music_sprite.visible = True
+        else:
+            self.music_sprite.visible = False            
+        self.music_sprite.draw()
 
     def on_resize(self, width, height):
         self.background_image.width, self.background_image.height = width, height
@@ -588,6 +612,11 @@ class DisplayWindow(pg.window.Window):
         self.leaderboard_label.font_size = height//15
         self.leaderboard_label.width = width*0.8
 
+        self.answering_team_label.x = width*0.5
+        self.answering_team_label.y = height*0.8
+        self.answering_team_label.font_size = height//15
+        self.answering_team_label.width = width*0.5
+
         self.music_sprite.x = width - self.music_sprite.width
 
         super(DisplayWindow, self).on_resize(width, height) # https://stackoverflow.com/a/23276270/602339
@@ -600,6 +629,9 @@ class DisplayWindow(pg.window.Window):
 
     def on_key_press(self, symbol, modifiers): # empêche Esc de fermer la fenêtre
         pass
+
+    def on_close(self):
+        sys.exit()
 
 # Classes de jeu
 ################
@@ -814,10 +846,7 @@ def play(playlist_file,
     def on_joybutton_press(joystick, button_id):
 
         if state.step == STEP_PLAYING:
-            try:
-                team_trying_to_buzz = state.get_team_by_button_id(button_id)
-
-            except KeyError:
+            if not (team_trying_to_buzz := state.get_team_by_button_id(button_id)):
                 return
             if team_trying_to_buzz.can_buzz:
                 state.last_team_to_buzz = team_trying_to_buzz
