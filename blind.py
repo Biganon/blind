@@ -122,7 +122,7 @@ def download_audio(string=None, video_id=None, output_file=None):
                     "silence",
                     "1",
                     "0.1",
-                    "1%"])
+                    "0.1%"])
 
     os.remove("temp_audio.mp3")
 
