@@ -49,7 +49,7 @@ DEFAULT_RETRY_MODE = RETRY_MODE_STRICT
 DEFAULT_RETRY_TIMER_DURATION = 5
 
 NUMBER_KEYS = (pg.window.key._1, pg.window.key._2, pg.window.key._3, pg.window.key._4, pg.window.key._5,
-              pg.window.key._6, pg.window.key._7, pg.window.key._8, pg.window.key._9)
+               pg.window.key._6, pg.window.key._7, pg.window.key._8, pg.window.key._9)
 
 # Callbacks
 ###########
@@ -81,7 +81,6 @@ def reduce_answer_timer(dt):
     pg.clock.unschedule(reduce_answer_timer)
 
 def restore_buzzer(dt, team):
-    print(f"{team.name} peut de nouveau buzzer")
     team.can_buzz = True
 
 # Fonctions utilitaires
