@@ -10,6 +10,7 @@ import sys
 import youtube_dl
 from decimal import Decimal
 from time import time
+from collections import deque
 
 # Constantes
 ############
@@ -257,6 +258,11 @@ class ControlWindow(pg.window.Window):
         else:
             info_label_string += "- / -\n"
 
+        if state.gifs:
+            info_label_string += f"GIF : {state.gifs[0]['name']} ({'visible' if state.gif_visible else 'caché'})\n"
+        else:
+            info_label_string += "GIF : aucun\n"
+
         info_label_string += ("Prêt", "Lecture", "Réponse", "Révélation")[state.step]
         
         if state.step == STEP_ANSWERING:
@@ -349,6 +355,13 @@ class ControlWindow(pg.window.Window):
             filename = f"teams_{int(time())}.txt"
             with open(filename, "w") as f:
                 f.write(output)
+        elif symbol == pg.window.key.G:
+            if modifiers & pg.window.key.MOD_CTRL:
+                state.shift_gif(1)
+            elif modifiers & pg.window.key.MOD_ALT:
+                state.gif_visible = not state.gif_visible
+            else:
+                state.shift_gif(-1)
 
         elif symbol in NUMBER_KEYS:
             number = NUMBER_KEYS.index(symbol) + 1
@@ -540,13 +553,10 @@ class DisplayWindow(pg.window.Window):
             self.background_image.blit(0,0,1)
             self.leaderboard_label.draw()
 
-        if state.gif:
-            state.gif.visible = bool(state.player)
-            state.gif.anchor_y = "bottom"
-            state.gif.anchor_x = "left"
-            state.gif.x = self.width - state.gif.width
-            state.gif.y = 0
-            state.gif.draw()
+        if state.gifs and state.gif_visible:
+            state.gifs[0]["sprite"].y = 0
+            state.gifs[0]["sprite"].x = self.width - state.gifs[0]["sprite"].width
+            state.gifs[0]["sprite"].draw()
 
     def on_resize(self, width, height):
         self.background_image.width, self.background_image.height = width, height
@@ -601,7 +611,8 @@ class State:
         self.pitch = Decimal("1")
         self.leaderboard_visible = False
         self.last_team_to_buzz = None
-        self.gif = None
+        self.gifs = None
+        self.gif_visible = False
 
         self.answer_timer_duration = None
         self.retry_mode = None
@@ -653,14 +664,12 @@ class State:
         requested_track_number = self.track_number + offset
         if 0 <= requested_track_number < len(self.tracks):
             self.track_number += offset
-            state.display_window.dispatch_event("on_draw")
+            self.display_window.dispatch_event("on_draw")
 
-    def set_gif(self, name):
-        if name:
-            animation = pg.resource.animation(os.path.join("assets", "gifs", f"{name}.gif"))
-            self.gif = pg.sprite.Sprite(img=animation)
-        else:
-            self.gif = None
+    def shift_gif(self, offset=1):
+        if not self.gifs:
+            return
+        self.gifs.rotate(offset)
 
 class Team:
     def __init__(self, name="NAME", score=0, button_id=0):
@@ -804,9 +813,18 @@ def play(playlist_file,
         cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
         track = Track(artist, title, media, cover)
         state.tracks.append(track)
-        print(f"[{str(idx+1).rjust(len(str(len(lines))))}/{len(lines)}] {artist} - {title}")
+        print(f"Piste {str(idx+1)}/{len(lines)} chargée ({artist} - {title})")
 
     buzzer_fx = pg.media.load(os.path.join("assets", "fx", BUZZER_FX), streaming=False)
+
+    gifs = []
+    gif_files = os.listdir(os.path.join("assets", "gifs"))
+    for idx, gif_file in enumerate(gif_files):
+        gif_name = gif_file[:-4]
+        gif_sprite = pg.sprite.Sprite(img=pg.resource.animation(os.path.join("assets", "gifs", gif_file)))
+        gifs.append({"name":gif_name, "sprite":gif_sprite})
+        print(f"GIF {str(idx+1)}/{len(gif_files)} chargé ({gif_name})")
+    state.gifs = deque(gifs)
 
     if state.tracks:
         state.tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
