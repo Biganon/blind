@@ -324,7 +324,7 @@ class ControlWindow(pg.window.Window):
                 state.step = STEP_PLAYING
                 state.player = state.get_track().media.play()
                 state.player.pitch = float(state.pitch)
-                if modifiers == 2: # ctrl appuyé : seek au hasard dans la piste
+                if modifiers & pg.window.key.MOD_CTRL: # ctrl appuyé : seek au hasard dans la piste
                     random_point = random.uniform(0.2, 0.8) # ni trop au début, ni trop à la fin
                     random_second = state.get_track().media.duration * random_point
                     state.player.seek(random_second)
@@ -369,7 +369,7 @@ class ControlWindow(pg.window.Window):
             number = NUMBER_KEYS.index(symbol) + 1
             try:
                 team = state.get_team_by_number(number)
-                if modifiers == 2:
+                if modifiers & pg.window.key.MOD_CTRL:
                     team.score -= 1
                 else:
                     team.score += 1
@@ -471,10 +471,6 @@ class DisplayWindow(pg.window.Window):
                                                   anchor_y="center",
                                                   color=(255,255,255,255))
 
-        music_animation = pg.resource.animation(os.path.join("assets", "gifs", "skeleton2.gif"))
-        self.music_sprite = pg.sprite.Sprite(img=music_animation)
-        self.music_sprite.x = self.width - self.music_sprite.width
-        self.music_sprite.visible = False
 
     def on_draw(self):
         self.clear()
@@ -559,11 +555,13 @@ class DisplayWindow(pg.window.Window):
             self.background_image.blit(0,0,1)
             self.leaderboard_label.draw()
 
-        if state.player:
-            self.music_sprite.visible = True
-        else:
-            self.music_sprite.visible = False            
-        self.music_sprite.draw()
+        if state.gif:
+            state.gif.visible = bool(state.player)
+            state.gif.anchor_y = "bottom"
+            state.gif.anchor_x = "left"
+            state.gif.x = self.width - state.gif.width
+            state.gif.y = 0
+            state.gif.draw()
 
     def on_resize(self, width, height):
         self.background_image.width, self.background_image.height = width, height
@@ -587,8 +585,6 @@ class DisplayWindow(pg.window.Window):
         self.answering_team_label.y = height*0.8
         self.answering_team_label.font_size = height//15
         self.answering_team_label.width = width*0.5
-
-        self.music_sprite.x = width - self.music_sprite.width
 
         super(DisplayWindow, self).on_resize(width, height) # https://stackoverflow.com/a/23276270/602339
 
@@ -620,6 +616,7 @@ class State:
         self.pitch = Decimal("1")
         self.leaderboard_visible = False
         self.last_team_to_buzz = None
+        self.gif = None
 
         self.answer_timer_duration = None
         self.retry_mode = None
@@ -671,6 +668,13 @@ class State:
         requested_track_number = self.track_number + offset
         if 0 <= requested_track_number < len(self.tracks):
             self.track_number += offset
+
+    def set_gif(self, name):
+        if name:
+            animation = pg.resource.animation(os.path.join("assets", "gifs", f"{name}.gif"))
+            self.gif = pg.sprite.Sprite(img=animation)
+        else:
+            self.gif = None
 
 class Team:
     def __init__(self, name="NAME", score=0, button_id=0):
