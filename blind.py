@@ -159,6 +159,11 @@ def download_cover(track):
 
     os.rename(temp_cover_file, os.path.join("covers", f"{track}.jpg"))
 
+def hex_to_rgb(h):
+    r, g, b = h[1:3], h[3:5], h[5:7]
+    r, g, b = map(lambda x:int(x, 16), (r, g, b))
+    return (r, g, b)
+
 # Classes de fenêtres
 #####################
 
