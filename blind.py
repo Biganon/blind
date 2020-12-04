@@ -282,8 +282,12 @@ class ControlWindow(pg.window.Window):
 
         max_name_length = max(len(f"{team.name} ({team.number})") for team in state.teams)
         for team in state.teams:
+            if team.can_buzz:
+                color = COLOR_WHITE
+            else:
+                color = COLOR_RED
             name_length = len(f"{team.name} ({team.number})")
-            info_label_string += f"{team.name} ({team.number}){' '*(max_name_length-name_length)} : {team.score}<br>"
+            info_label_string += f"<font color='{color}'>{team.name} ({team.number}){' '*(max_name_length-name_length)} : {team.score}</font><br>"
 
         info_label_string += "<br>"
 
