@@ -29,7 +29,7 @@ RETRY_MODE_STRICT = 0
 RETRY_MODE_ALTERNATING = 1
 RETRY_MODE_TIMER = 2
 
-CONTROL_WINDOW_WIDTH = 1200
+CONTROL_WINDOW_WIDTH = 500
 CONTROL_WINDOW_HEIGHT = 900
 CONTROL_WINDOW_PADDING = 20
 TIMER_OUTLINE_WIDTH = CONTROL_WINDOW_WIDTH - 2*CONTROL_WINDOW_PADDING
@@ -190,9 +190,9 @@ class ControlWindow(pg.window.Window):
                                             anchor_x="left",
                                             anchor_y="top",
                                             x=CONTROL_WINDOW_PADDING,
-                                            y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
+                                            y=CONTROL_WINDOW_HEIGHT-2*CONTROL_WINDOW_PADDING-TIMER_OUTLINE_HEIGHT,
                                             multiline=True,
-                                            width=CONTROL_WINDOW_WIDTH-2*CONTROL_WINDOW_PADDING)
+                                            width=9999)
 
         self.info_label = pg.text.HTMLLabel("Info",
                                          anchor_x="left",
@@ -200,7 +200,7 @@ class ControlWindow(pg.window.Window):
                                          x=CONTROL_WINDOW_PADDING,
                                          y=CONTROL_WINDOW_PADDING,
                                          multiline=True,
-                                         width=CONTROL_WINDOW_WIDTH-2*CONTROL_WINDOW_PADDING)
+                                         width=9999)
 
         self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_PADDING,
                                                  CONTROL_WINDOW_HEIGHT-TIMER_OUTLINE_HEIGHT-CONTROL_WINDOW_PADDING,
@@ -258,8 +258,10 @@ class ControlWindow(pg.window.Window):
                 mark_title = "-"
             else:
                 mark_title = " "
-            line = f"[{mark_artist}][{mark_title}] {track.artist} - {track.title}"
-            line = f"<font color='{color}'>{line[:90]}</font>"
+            line = f"{track.artist} - {track.title}"
+            line = line[:39] if track != state.selected_track else line[-39:]
+            line = f"[{mark_artist}][{mark_title}] {line}"
+            line = f"<font color='{color}'>{line}</font>"
             playlist_label_string += f"{line}<br>"
 
         self.playlist_label.text = f"<font face='Droid Sans Mono'>{playlist_label_string}</font>"
