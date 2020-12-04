@@ -168,15 +168,17 @@ class ControlWindow(pg.window.Window):
                                             CONTROL_WINDOW_HEIGHT,
                                             caption="Blind - Contrôleur")
 
-        self.playlist_label = pg.text.Label("Playlist",
-                                            font_name=CONTROL_WINDOW_FONT,
-                                            font_size=CONTROL_WINDOW_FONT_SIZE*0.8,
+        self.playlist_label = pg.text.HTMLLabel("Playlist",
+                                            #font_name=CONTROL_WINDOW_FONT,
+                                            #font_size=CONTROL_WINDOW_FONT_SIZE*0.8,
                                             anchor_x="left",
                                             anchor_y="top",
                                             x=CONTROL_WINDOW_PADDING,
                                             y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
                                             multiline=True,
                                             width=2000)
+
+        #self.playlist_label = pg.text.decode_attributed("Playlist")
 
         self.info_label = pg.text.Label("Info",
                                          font_name=CONTROL_WINDOW_FONT,
@@ -223,7 +225,13 @@ class ControlWindow(pg.window.Window):
         for offset in range(-2, 30):
             track = state.get_track(offset=offset)
             if track:
-                cursor = '>' if offset == 0 else ' '
+                if offset == 0:
+                    if state.player:
+                        color = "#00ff00"
+                    else:
+                        color = "#ffff00"
+                else:
+                    color = "#ffffff"
                 if track.artist_revealed and track.artist_found_by:
                     mark_artist = str(track.artist_found_by.number)
                 elif track.artist_revealed:
@@ -236,14 +244,14 @@ class ControlWindow(pg.window.Window):
                     mark_title = "-"
                 else:
                     mark_title = " "                    
-                line = f"{cursor} [{mark_artist}][{mark_title}] {track.artist} - {track.title}"
-                if len(line) > 59:
-                    line = line[:58]+"…"
-                playlist_label_string += f"{line}\n"
+                line = f"<font color='{color}'>[{mark_artist}][{mark_title}] {track.artist} - {track.title}</font>"
+                #if len(line) > 59:
+                #    line = line[:58]+"…"
+                playlist_label_string += f"{line}<br>"
             else:
-                playlist_label_string += "\n"
+                playlist_label_string += "<br>"
 
-        self.playlist_label.text = playlist_label_string
+        self.playlist_label.text = f"<font face='Droid Sans Mono'>{playlist_label_string}</font>"
 
         info_label_string = ""
 
