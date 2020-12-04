@@ -56,6 +56,7 @@ COLOR_GREEN = "#A2D45E"
 COLOR_BLUE = "#00A19B"
 COLOR_YELLOW = "#F3BD48"
 COLOR_PURPLE = "#5B315E"
+COLOR_WHITE = "#FFFFFF"
 
 # Callbacks
 ###########
@@ -196,12 +197,12 @@ class ControlWindow(pg.window.Window):
                                          multiline=True,
                                          width=2000)
 
-        self.scores_label = pg.text.Label("Scores",
-                                          font_name=CONTROL_WINDOW_FONT,
-                                          font_size=CONTROL_WINDOW_FONT_SIZE,
+        self.scores_label = pg.text.HTMLLabel("Scores",
+                                          #font_name=CONTROL_WINDOW_FONT,
+                                          #font_size=CONTROL_WINDOW_FONT_SIZE,
                                           multiline=True,
-                                          width=CONTROL_WINDOW_WIDTH-(2*CONTROL_WINDOW_PADDING),
-                                          align="right",
+                                          width=500,
+                                          #align="right",
                                           x=CONTROL_WINDOW_WIDTH-CONTROL_WINDOW_PADDING,
                                           y=CONTROL_WINDOW_PADDING,
                                           anchor_x="right",
@@ -233,11 +234,11 @@ class ControlWindow(pg.window.Window):
             if track:
                 if offset == 0:
                     if state.player:
-                        color = "#00ff00"
+                        color = COLOR_GREEN
                     else:
-                        color = "#ffff00"
+                        color = COLOR_YELLOW
                 else:
-                    color = "#ffffff"
+                    color = COLOR_WHITE
                 if track.artist_revealed and track.artist_found_by:
                     mark_artist = str(track.artist_found_by.number)
                 elif track.artist_revealed:
@@ -292,7 +293,7 @@ class ControlWindow(pg.window.Window):
                 state.timer_running = True
                 pg.clock.schedule_interval(reduce_answer_timer, 0.01)
 
-        self.info_label.text = f"<font color='#ffffff' face='Droid Sans Mono'>{info_label_string}</font>"
+        self.info_label.text = f"<font color='{COLOR_WHITE}' face='Droid Sans Mono'>{info_label_string}</font>"
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
@@ -307,9 +308,9 @@ class ControlWindow(pg.window.Window):
 
         scores_string = ""
         for team in state.teams:
-            scores_string += f"{team.name} ({team.number}) : {str(team.score).rjust(3)}\n"
-        scores_string = scores_string.strip()
-        self.scores_label.text = scores_string
+            scores_string += f"{team.name} ({team.number}) : {str(team.score).rjust(3)}<br>"
+        scores_string = scores_string[:-4]
+        self.scores_label.text = f"<font color='{COLOR_WHITE}' face='Droid Sans Mono'>{scores_string}</font>"
 
         self.playlist_label.draw()
         self.info_label.draw()
