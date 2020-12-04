@@ -67,7 +67,7 @@ FX_DIR = os.path.join(ASSETS_DIR, "fx")
 GIFS_DIR = os.path.join(ASSETS_DIR, "gifs")
 IMAGES_DIR = os.path.join(ASSETS_DIR, "images")
 
-MAX_PLAYLIST_ENTRIES = 25
+MAX_PLAYLIST_ENTRIES = 23
 PLAYLIST_BUFFER_LINES = 4
 
 # Callbacks
@@ -275,6 +275,11 @@ class ControlWindow(pg.window.Window):
         self.playlist_label.text = f"<font face='{CONTROL_WINDOW_FONT}'>{playlist_label_string}</font>"
 
         info_label_string = ""
+
+        info_label_string += f"{state.selected_track.artist}\n"
+        info_label_string += f"{state.selected_track.title}\n"
+        info_label_string += "\n"
+
         max_name_length = max(len(f"{team.name} ({team.number})") for team in state.teams)
         for team in state.teams:
             name_length = len(f"{team.name} ({team.number})")
