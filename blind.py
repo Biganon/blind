@@ -17,8 +17,6 @@ from collections import deque
 
 CONTROL_WINDOW_FONT = "Droid Sans Mono"
 DISPLAY_WINDOW_FONT = "Kenyan Coffee"
-CONTROL_WINDOW_FONT_SIZE = 18
-DISPLAY_WINDOW_FONT_SIZE = 80
 
 STEP_IDLE = 0
 STEP_PLAYING = 1
@@ -274,7 +272,7 @@ class ControlWindow(pg.window.Window):
             line = f"<font color='{color}'>{line}</font>"
             playlist_label_string += f"{line}<br>"
 
-        self.playlist_label.text = f"<font face='Droid Sans Mono'>{playlist_label_string}</font>"
+        self.playlist_label.text = f"<font face='{CONTROL_WINDOW_FONT}'>{playlist_label_string}</font>"
 
         info_label_string = ""
         max_name_length = max(len(f"{team.name} ({team.number})") for team in state.teams)
@@ -315,7 +313,7 @@ class ControlWindow(pg.window.Window):
                 state.timer_running = True
                 pg.clock.schedule_interval(reduce_answer_timer, 0.01)
 
-        self.info_label.text = f"<pre><font color='{COLOR_WHITE}' face='Droid Sans Mono'>{info_label_string}</font></pre>"
+        self.info_label.text = f"<pre><font color='{COLOR_WHITE}' face='{CONTROL_WINDOW_FONT}'>{info_label_string}</font></pre>"
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
         # self.timer_bar.color = hex_to_rgb((COLOR_YELLOW, COLOR_RED)[state.step == STEP_ANSWERING])
