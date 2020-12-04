@@ -832,7 +832,7 @@ def play(playlist_file,
     buzzer_fx = pg.media.load(os.path.join(FX_DIR, BUZZER_FX), streaming=False)
 
     gifs = []
-    gif_files = os.listdir(GIFS_DIR)
+    gif_files = sorted(os.listdir(GIFS_DIR))
     for idx, gif_file in enumerate(gif_files):
         gif_name = gif_file[:-4]
         gif_sprite = pg.sprite.Sprite(img=pg.resource.animation(os.path.join(GIFS_DIR, gif_file)))
