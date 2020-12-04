@@ -58,6 +58,13 @@ COLOR_YELLOW = "#F3BD48"
 COLOR_PURPLE = "#5B315E"
 COLOR_WHITE = "#FFFFFF"
 
+ASSETS_DIR = "assets"
+COVERS_DIR = "covers"
+TRACKS_DIR = "tracks"
+FX_DIR = os.path.join(ASSETS_DIR, "fx")
+GIFS_DIR = os.path.join(ASSETS_DIR, "gifs")
+IMAGES_DIR = os.path.join(ASSETS_DIR, "images")
+
 # Callbacks
 ###########
 
@@ -72,9 +79,6 @@ def make_quieter(dt):
     pg.clock.unschedule(make_quieter)
     for team in state.teams:
         team.can_buzz = True
-
-    #state.shift_track_number(1)
-    #reset_answer_timer() # <- utilité ?
 
 def reduce_answer_timer(dt):
     unit = dt / state.answer_timer_duration
@@ -176,8 +180,6 @@ class ControlWindow(pg.window.Window):
                                             caption="Blind - Contrôleur")
 
         self.playlist_label = pg.text.HTMLLabel("Playlist",
-                                            #font_name=CONTROL_WINDOW_FONT,
-                                            #font_size=CONTROL_WINDOW_FONT_SIZE*0.8,
                                             anchor_x="left",
                                             anchor_y="top",
                                             x=CONTROL_WINDOW_PADDING,
@@ -185,11 +187,7 @@ class ControlWindow(pg.window.Window):
                                             multiline=True,
                                             width=CONTROL_WINDOW_WIDTH-2*CONTROL_WINDOW_PADDING)
 
-        #self.playlist_label = pg.text.decode_attributed("Playlist")
-
         self.info_label = pg.text.HTMLLabel("Info",
-                                         #font_name=CONTROL_WINDOW_FONT,
-                                         #font_size=CONTROL_WINDOW_FONT_SIZE,
                                          anchor_x="left",
                                          anchor_y="bottom",
                                          x=CONTROL_WINDOW_PADDING,
@@ -212,7 +210,7 @@ class ControlWindow(pg.window.Window):
                                              TIMER_BAR_WIDTH,
                                              TIMER_BAR_HEIGHT,
                                              color=(255, 255, 255))
-        self.success_fx = pg.media.load(os.path.join("assets", "fx", SUCCESS_FX), streaming=False)
+        self.success_fx = pg.media.load(os.path.join(FX_DIR, SUCCESS_FX), streaming=False)
 
     def on_draw(self):
         self.clear()
@@ -242,8 +240,6 @@ class ControlWindow(pg.window.Window):
                     mark_title = " "
                 line = f"[{mark_artist}][{mark_title}] {track.artist} - {track.title}"
                 line = f"<font color='{color}'>{line[:90]}</font>"
-                #if len(line) > 59:
-                #    line = line[:58]+"…"
                 playlist_label_string += f"{line}<br>"
             else:
                 playlist_label_string += "<br>"
@@ -301,7 +297,6 @@ class ControlWindow(pg.window.Window):
                 state.player.play()
             else:
                 state.player.volume = 1
-            # pg.clock.unschedule(reduce_answer_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
 
         self.playlist_label.draw()
         self.info_label.draw()
@@ -415,9 +410,9 @@ class DisplayWindow(pg.window.Window):
                                             caption="Blind - Afficheur")
         self.set_location(50,50)
 
-        self.neutral_image = pg.image.load(os.path.join("assets", "images", NEUTRAL_IMAGE)).get_texture()
-        self.background_image = pg.image.load(os.path.join("assets", "images", BACKGROUND_IMAGE)).get_texture()
-        self.buzzer_image = pg.image.load(os.path.join("assets", "images", BUZZER_IMAGE)).get_texture()
+        self.neutral_image = pg.image.load(os.path.join(IMAGES_DIR, NEUTRAL_IMAGE)).get_texture()
+        self.background_image = pg.image.load(os.path.join(IMAGES_DIR, BACKGROUND_IMAGE)).get_texture()
+        self.buzzer_image = pg.image.load(os.path.join(IMAGES_DIR, BUZZER_IMAGE)).get_texture()
 
         self.current_artist_label = pg.text.Label("Artiste",
                                                   font_name=DISPLAY_WINDOW_FONT,
@@ -823,13 +818,13 @@ def play(playlist_file,
         state.tracks.append(track)
         print(f"Piste {str(idx+1)}/{len(lines)} chargée ({artist} - {title})")
 
-    buzzer_fx = pg.media.load(os.path.join("assets", "fx", BUZZER_FX), streaming=False)
+    buzzer_fx = pg.media.load(os.path.join(FX_DIR, BUZZER_FX), streaming=False)
 
     gifs = []
-    gif_files = os.listdir(os.path.join("assets", "gifs"))
+    gif_files = os.listdir(GIFS_DIR)
     for idx, gif_file in enumerate(gif_files):
         gif_name = gif_file[:-4]
-        gif_sprite = pg.sprite.Sprite(img=pg.resource.animation(os.path.join("assets", "gifs", gif_file)))
+        gif_sprite = pg.sprite.Sprite(img=pg.resource.animation(os.path.join(GIFS_DIR, gif_file)))
         gifs.append({"name":gif_name, "sprite":gif_sprite})
         print(f"GIF {str(idx+1)}/{len(gif_files)} chargé ({gif_name})")
     state.gifs = deque(gifs)
