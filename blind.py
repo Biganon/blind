@@ -183,7 +183,7 @@ class ControlWindow(pg.window.Window):
                                             x=CONTROL_WINDOW_PADDING,
                                             y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
                                             multiline=True,
-                                            width=2000)
+                                            width=CONTROL_WINDOW_WIDTH-2*CONTROL_WINDOW_PADDING)
 
         #self.playlist_label = pg.text.decode_attributed("Playlist")
 
@@ -195,7 +195,7 @@ class ControlWindow(pg.window.Window):
                                          x=CONTROL_WINDOW_PADDING,
                                          y=CONTROL_WINDOW_PADDING,
                                          multiline=True,
-                                         width=2000)
+                                         width=CONTROL_WINDOW_WIDTH-2*CONTROL_WINDOW_PADDING)
 
         self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-4,
                                                  CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-4,
@@ -239,8 +239,9 @@ class ControlWindow(pg.window.Window):
                 elif track.title_revealed:
                     mark_title = "-"
                 else:
-                    mark_title = " "                    
-                line = f"<font color='{color}'>[{mark_artist}][{mark_title}] {track.artist} - {track.title}</font>"
+                    mark_title = " "
+                line = f"[{mark_artist}][{mark_title}] {track.artist} - {track.title}"
+                line = f"<font color='{color}'>{line[:90]}</font>"
                 #if len(line) > 59:
                 #    line = line[:58]+"…"
                 playlist_label_string += f"{line}<br>"
