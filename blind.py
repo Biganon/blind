@@ -172,39 +172,21 @@ class ControlWindow(pg.window.Window):
                                             font_size=CONTROL_WINDOW_FONT_SIZE*0.8,
                                             anchor_x="left",
                                             anchor_y="top",
-                                            x=220,
+                                            x=CONTROL_WINDOW_PADDING,
                                             y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
                                             multiline=True,
                                             width=2000)
 
-        self.track_number_label = pg.text.Label("Numéro",
-                                                font_name=CONTROL_WINDOW_FONT,
-                                                font_size=CONTROL_WINDOW_FONT_SIZE,
-                                                x=CONTROL_WINDOW_PADDING,
-                                                y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING,
-                                                anchor_x="left",
-                                                anchor_y="top")
-        self.pitch_label = pg.text.Label("Pitch",
+        self.info_label = pg.text.Label("Info",
                                          font_name=CONTROL_WINDOW_FONT,
                                          font_size=CONTROL_WINDOW_FONT_SIZE,
-                                         x=CONTROL_WINDOW_PADDING,
-                                         y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING-50,
                                          anchor_x="left",
-                                         anchor_y="top")
-        self.seek_label = pg.text.Label("Seek",
-                                        font_name=CONTROL_WINDOW_FONT,
-                                        font_size=CONTROL_WINDOW_FONT_SIZE,
-                                        x=CONTROL_WINDOW_PADDING,
-                                        y=CONTROL_WINDOW_HEIGHT-CONTROL_WINDOW_PADDING-100,
-                                        anchor_x="left",
-                                        anchor_y="top")
-        self.step_label = pg.text.Label("Etape",
-                                        font_name=CONTROL_WINDOW_FONT,
-                                        font_size=CONTROL_WINDOW_FONT_SIZE,
-                                        x=CONTROL_WINDOW_PADDING,
-                                        y=CONTROL_WINDOW_PADDING,
-                                        anchor_x="left",
-                                        anchor_y="bottom")
+                                         anchor_y="bottom",
+                                         x=CONTROL_WINDOW_PADDING,
+                                         y=CONTROL_WINDOW_PADDING,
+                                         multiline=True,
+                                         width=2000)
+
         self.scores_label = pg.text.Label("Scores",
                                           font_name=CONTROL_WINDOW_FONT,
                                           font_size=CONTROL_WINDOW_FONT_SIZE,
@@ -236,8 +218,8 @@ class ControlWindow(pg.window.Window):
     def on_draw(self):
         self.clear()
 
-        output = ""
-        for offset in range(-2,15):
+        playlist_label_string = ""
+        for offset in range(-2, 30):
             track = state.get_track(offset=offset)
             if track:
                 cursor = '>' if offset == 0 else ' '
@@ -256,33 +238,38 @@ class ControlWindow(pg.window.Window):
                 line = f"{cursor} [{mark_artist}][{mark_title}] {track.artist} - {track.title}"
                 if len(line) > 59:
                     line = line[:58]+"…"
-                output += f"{line}\n"
+                playlist_label_string += f"{line}\n"
             else:
-                output += "\n"
+                playlist_label_string += "\n"
 
-        self.playlist_label.text = output
+        self.playlist_label.text = playlist_label_string
 
-        self.track_number_label.text = f"{state.track_number+1}/{len(state.tracks)}"
-        self.pitch_label.text = f"Pitch : {state.pitch}"
+        info_label_string = ""
+
+        info_label_string += f"Piste : {state.track_number+1}/{len(state.tracks)}\n"
+        info_label_string += f"Pitch : {state.pitch}\n"
         if state.player:
             elapsed_seconds = int(state.player.time)
             elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
             total_seconds = int(state.get_track().media.duration)
             total_minsec = f"{(total_seconds // 60):02}:{(total_seconds % 60):02}"
-            self.seek_label.text = f"{elapsed_minsec:} / {total_minsec}"
+            info_label_string += f"{elapsed_minsec:} / {total_minsec}\n"
         else:
-            self.seek_label.text = "- / -"
+            info_label_string += "- / -\n"
 
-        self.step_label.text = ("Prêt", "Lecture", "Réponse", "Révélation")[state.step]
+        info_label_string += ("Prêt", "Lecture", "Réponse", "Révélation")[state.step]
         
         if state.step == STEP_ANSWERING:
-            self.step_label.text += f" ({state.last_team_to_buzz.name})"
+            info_label_string += f" ({state.last_team_to_buzz.name})"
+            # aucun rapport avec le label d'infos :
             if not state.timer_running: # pour éviter que le schedule_interval crée plusieurs intervalles.
                                         # Note : pas possible de se baser sur timer, car il est réduit dans
                                         # le callback, or le callback n'est pas appelé à t=0, mais à t=0.01,
                                         # donc dans l'intervalle on_draw() peut s'exécuter plusieurs fois.
                 state.timer_running = True
                 pg.clock.schedule_interval(reduce_answer_timer, 0.01)
+
+        self.info_label.text = info_label_string
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
@@ -302,10 +289,7 @@ class ControlWindow(pg.window.Window):
         self.scores_label.text = scores_string
 
         self.playlist_label.draw()
-        self.track_number_label.draw()
-        self.pitch_label.draw()
-        self.seek_label.draw()
-        self.step_label.draw()
+        self.info_label.draw()
         self.scores_label.draw()
         self.timer_outline.draw()
         self.timer_inside.draw()
