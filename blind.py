@@ -31,7 +31,6 @@ RETRY_MODE_TIMER = 2
 CONTROL_WINDOW_WIDTH = 1200
 CONTROL_WINDOW_HEIGHT = 900
 CONTROL_WINDOW_PADDING = 20
-TRACKS_CENTER = CONTROL_WINDOW_HEIGHT - 100
 TIMER_BAR_WIDTH = 200
 TIMER_BAR_HEIGHT = 40
 DISPLAY_WINDOW_WIDTH = 1200
@@ -168,7 +167,7 @@ class ControlWindow(pg.window.Window):
                                             CONTROL_WINDOW_HEIGHT,
                                             caption="Blind - Contrôleur")
 
-        self.playlist_label = pg.text.Label("Playlist\nCoucou",
+        self.playlist_label = pg.text.Label("Playlist",
                                             font_name=CONTROL_WINDOW_FONT,
                                             font_size=CONTROL_WINDOW_FONT_SIZE*0.8,
                                             anchor_x="left",
