@@ -328,6 +328,7 @@ class ControlWindow(pg.window.Window):
         elif symbol == pg.window.key.R:
             state.get_track().artist_revealed = True
             state.get_track().title_revealed = True
+            state.display_window.dispatch_event("on_draw")
         elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.get_track().title_revealed:
             state.last_team_to_buzz.score += 1
             state.get_track().title_revealed = True
@@ -340,6 +341,7 @@ class ControlWindow(pg.window.Window):
             self.success_fx.play()
         elif symbol == pg.window.key.L:
             state.leaderboard_visible = not state.leaderboard_visible
+            state.display_window.dispatch_event("on_draw")
         elif symbol == pg.window.key.S:
             output = ""
             for team in state.teams:
@@ -651,6 +653,7 @@ class State:
         requested_track_number = self.track_number + offset
         if 0 <= requested_track_number < len(self.tracks):
             self.track_number += offset
+            state.display_window.dispatch_event("on_draw")
 
     def set_gif(self, name):
         if name:
@@ -808,8 +811,8 @@ def play(playlist_file,
     if state.tracks:
         state.tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
 
-    control_window = ControlWindow()
-    display_window = DisplayWindow()
+    state.control_window = ControlWindow()
+    state.display_window = DisplayWindow()
 
     @state.joystick.event
     def on_joybutton_press(joystick, button_id):
