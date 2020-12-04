@@ -65,6 +65,9 @@ FX_DIR = os.path.join(ASSETS_DIR, "fx")
 GIFS_DIR = os.path.join(ASSETS_DIR, "gifs")
 IMAGES_DIR = os.path.join(ASSETS_DIR, "images")
 
+MAX_PLAYLIST_ENTRIES = 25
+PLAYLIST_BUFFER_LINES = 4
+
 # Callbacks
 ###########
 
@@ -216,33 +219,44 @@ class ControlWindow(pg.window.Window):
         self.clear()
 
         playlist_label_string = ""
-        for offset in range(-2, 30):
-            track = state.get_track(offset=offset)
-            if track:
-                if offset == 0:
-                    if state.player:
-                        color = COLOR_GREEN
-                    else:
-                        color = COLOR_YELLOW
+
+        bottom_track = MAX_PLAYLIST_ENTRIES-1+state.playlist_scroll
+        top_track = state.playlist_scroll
+        scroll = state.playlist_scroll
+        if state.track_number > bottom_track - PLAYLIST_BUFFER_LINES and scroll < len(state.tracks) - MAX_PLAYLIST_ENTRIES:
+            state.playlist_scroll += 1
+        if state.track_number < top_track + PLAYLIST_BUFFER_LINES and scroll > 0:
+            state.playlist_scroll -= 1
+
+        for i in range(MAX_PLAYLIST_ENTRIES):
+            try:
+                track = state.tracks[i + state.playlist_scroll]
+            except IndexError:
+                break
+
+            if track == state.selected_track:
+                if state.player:
+                    color = COLOR_GREEN
                 else:
-                    color = COLOR_WHITE
-                if track.artist_revealed and track.artist_found_by:
-                    mark_artist = str(track.artist_found_by.number)
-                elif track.artist_revealed:
-                    mark_artist = "-"
-                else:
-                    mark_artist = " "
-                if track.title_revealed and track.title_found_by:
-                    mark_title = str(track.title_found_by.number)
-                elif track.title_revealed:
-                    mark_title = "-"
-                else:
-                    mark_title = " "
-                line = f"[{mark_artist}][{mark_title}] {track.artist} - {track.title}"
-                line = f"<font color='{color}'>{line[:90]}</font>"
-                playlist_label_string += f"{line}<br>"
+                    color = COLOR_YELLOW
             else:
-                playlist_label_string += "<br>"
+                color = COLOR_WHITE
+
+            if track.artist_revealed and track.artist_found_by:
+                mark_artist = str(track.artist_found_by.number)
+            elif track.artist_revealed:
+                mark_artist = "-"
+            else:
+                mark_artist = " "
+            if track.title_revealed and track.title_found_by:
+                mark_title = str(track.title_found_by.number)
+            elif track.title_revealed:
+                mark_title = "-"
+            else:
+                mark_title = " "
+            line = f"{state.tracks.index(track)} [{mark_artist}][{mark_title}] {track.artist} - {track.title}"
+            line = f"<font color='{color}'>{line[:90]}</font>"
+            playlist_label_string += f"{line}<br>"
 
         self.playlist_label.text = f"<font face='Droid Sans Mono'>{playlist_label_string}</font>"
 
@@ -250,7 +264,6 @@ class ControlWindow(pg.window.Window):
         max_name_length = max(len(f"{team.name} ({team.number})") for team in state.teams)
         for team in state.teams:
             name_length = len(f"{team.name} ({team.number})")
-            print(name_length)
             info_label_string += f"{team.name} ({team.number}){' '*(max_name_length-name_length)} : {team.score}<br>"
 
         info_label_string += "<br>"
@@ -260,7 +273,7 @@ class ControlWindow(pg.window.Window):
         if state.player:
             elapsed_seconds = int(state.player.time)
             elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
-            total_seconds = int(state.get_track().media.duration)
+            total_seconds = int(state.selected_track.media.duration)
             total_minsec = f"{(total_seconds // 60):02}:{(total_seconds % 60):02}"
             info_label_string += f"{elapsed_minsec:} / {total_minsec}<br>"
         else:
@@ -290,7 +303,7 @@ class ControlWindow(pg.window.Window):
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
-        if state.get_track().title_revealed and state.get_track().artist_revealed and state.step == STEP_ANSWERING:
+        if state.selected_track.title_revealed and state.selected_track.artist_revealed and state.step == STEP_ANSWERING:
 
             state.step = STEP_REVEALED
             if state.pause_during_answers:
@@ -314,11 +327,11 @@ class ControlWindow(pg.window.Window):
         if symbol == pg.window.key.ENTER:
             if state.step == STEP_IDLE:
                 state.step = STEP_PLAYING
-                state.player = state.get_track().media.play()
+                state.player = state.selected_track.media.play()
                 state.player.pitch = float(state.pitch)
                 if modifiers & pg.window.key.MOD_CTRL: # ctrl appuyé : seek au hasard dans la piste
                     random_point = random.uniform(0.2, 0.8) # ni trop au début, ni trop à la fin
-                    random_second = state.get_track().media.duration * random_point
+                    random_second = state.selected_track.media.duration * random_point
                     state.player.seek(random_second)
 
             elif state.step == STEP_PLAYING:
@@ -335,18 +348,18 @@ class ControlWindow(pg.window.Window):
             elif state.step == STEP_REVEALED:
                 reset_track()
         elif symbol == pg.window.key.R:
-            state.get_track().artist_revealed = True
-            state.get_track().title_revealed = True
+            state.selected_track.artist_revealed = True
+            state.selected_track.title_revealed = True
             state.display_window.dispatch_event("on_draw")
-        elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.get_track().title_revealed:
+        elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.selected_track.title_revealed:
             state.last_team_to_buzz.score += 1
-            state.get_track().title_revealed = True
-            state.get_track().title_found_by = state.last_team_to_buzz
+            state.selected_track.title_revealed = True
+            state.selected_track.title_found_by = state.last_team_to_buzz
             self.success_fx.play()
-        elif symbol == pg.window.key.A and state.step == STEP_ANSWERING and not state.get_track().artist_revealed:
+        elif symbol == pg.window.key.A and state.step == STEP_ANSWERING and not state.selected_track.artist_revealed:
             state.last_team_to_buzz.score += 1
-            state.get_track().artist_revealed = True
-            state.get_track().artist_found_by = state.last_team_to_buzz
+            state.selected_track.artist_revealed = True
+            state.selected_track.artist_found_by = state.last_team_to_buzz
             self.success_fx.play()
         elif symbol == pg.window.key.L:
             state.leaderboard_visible = not state.leaderboard_visible
@@ -360,11 +373,11 @@ class ControlWindow(pg.window.Window):
                 f.write(output)
         elif symbol == pg.window.key.G:
             if modifiers & pg.window.key.MOD_CTRL:
-                state.shift_gif(1)
+                state.shift_selected_gif(1)
             elif modifiers & pg.window.key.MOD_ALT:
                 state.gif_visible = not state.gif_visible
             else:
-                state.shift_gif(-1)
+                state.shift_selected_gif(-1)
 
         elif symbol in NUMBER_KEYS:
             number = NUMBER_KEYS.index(symbol) + 1
@@ -391,9 +404,9 @@ class ControlWindow(pg.window.Window):
 
     def on_text_motion(self, motion):
         if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE:
-            state.shift_track_number(-1)
+            state.shift_selected_track(-1)
         elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE:
-            state.shift_track_number(1)
+            state.shift_selected_track(1)
         elif motion == pg.window.key.MOTION_RIGHT and state.player:
             state.player.seek(state.player.time + 1)
         elif motion == pg.window.key.MOTION_LEFT and state.player:
@@ -477,7 +490,7 @@ class DisplayWindow(pg.window.Window):
         self.clear()
         self.background_image.blit(0,0,1)
 
-        track = state.get_track()
+        track = state.selected_track
 
         if state.step == STEP_ANSWERING:
             self.cover_image = self.buzzer_image
@@ -616,6 +629,7 @@ class State:
         self.last_team_to_buzz = None
         self.gifs = None
         self.gif_visible = False
+        self.playlist_scroll = 0
 
         self.answer_timer_duration = None
         self.retry_mode = None
@@ -638,6 +652,10 @@ class State:
     def teams(self):
         return sorted(self._teams, key=lambda x: (-x.score, x.name))
 
+    @property
+    def selected_track(self):
+        return self.tracks[self.track_number]
+    
     def add_team(self, team):
         team.number = len(self._teams) + 1
         self._teams.append(team)
@@ -656,20 +674,13 @@ class State:
             team = None
         return team
 
-    def get_track(self, offset=0):
-        requested_track_number = self.track_number + offset
-        if 0 <= requested_track_number < len(self.tracks):
-            return self.tracks[requested_track_number]
-        else:
-            return None
-
-    def shift_track_number(self, offset=1):
+    def shift_selected_track(self, offset=1):
         requested_track_number = self.track_number + offset
         if 0 <= requested_track_number < len(self.tracks):
             self.track_number += offset
             self.display_window.dispatch_event("on_draw")
 
-    def shift_gif(self, offset=1):
+    def shift_selected_gif(self, offset=1):
         if not self.gifs:
             return
         self.gifs.rotate(offset)
@@ -812,7 +823,7 @@ def play(playlist_file,
 
     for idx, line in enumerate(lines):
         artist, title = line.split(" - ")
-        media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
+        media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=True)
         cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
         track = Track(artist, title, media, cover)
         state.tracks.append(track)
