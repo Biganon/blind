@@ -254,7 +254,7 @@ class ControlWindow(pg.window.Window):
                 mark_title = "-"
             else:
                 mark_title = " "
-            line = f"{state.tracks.index(track)} [{mark_artist}][{mark_title}] {track.artist} - {track.title}"
+            line = f"[{mark_artist}][{mark_title}] {track.artist} - {track.title}"
             line = f"<font color='{color}'>{line[:90]}</font>"
             playlist_label_string += f"{line}<br>"
 
