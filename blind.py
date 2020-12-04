@@ -86,6 +86,7 @@ def make_quieter(dt):
     pg.clock.unschedule(make_quieter)
     for team in state.teams:
         team.can_buzz = True
+    reset_answer_timer()
 
 def reduce_answer_timer(dt):
     unit = dt / state.answer_timer_duration
@@ -281,9 +282,9 @@ class ControlWindow(pg.window.Window):
             elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
             total_seconds = int(state.selected_track.media.duration)
             total_minsec = f"{(total_seconds // 60):02}:{(total_seconds % 60):02}"
-            info_label_string += f"{elapsed_minsec:} / {total_minsec}<br>"
+            info_label_string += f"Position : {elapsed_minsec:} / {total_minsec}<br>"
         else:
-            info_label_string += "- / -<br>"
+            info_label_string += "Position : - / -<br>"
 
         if state.gifs:
             info_label_string += f"GIF : {state.gifs[0]['name']} ({'visible' if state.gif_visible else 'caché'})<br>"
@@ -830,7 +831,7 @@ def play(playlist_file,
 
     for idx, line in enumerate(lines):
         artist, title = line.split(" - ")
-        media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=True)
+        media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
         cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
         track = Track(artist, title, media, cover)
         state.tracks.append(track)
@@ -850,8 +851,8 @@ def play(playlist_file,
     if state.tracks:
         state.tracks[0].media.play().pause() # pour éviter un lag à la 1re piste
 
-    state.control_window = ControlWindow()
     state.display_window = DisplayWindow()
+    state.control_window = ControlWindow()
 
     @state.joystick.event
     def on_joybutton_press(joystick, button_id):
