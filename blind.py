@@ -15,7 +15,7 @@ from collections import deque
 # Constantes
 ############
 
-CONTROL_WINDOW_FONT = "monospace"
+CONTROL_WINDOW_FONT = "Droid Sans Mono"
 DISPLAY_WINDOW_FONT = "Kenyan Coffee"
 CONTROL_WINDOW_FONT_SIZE = 18
 DISPLAY_WINDOW_FONT_SIZE = 80
@@ -50,6 +50,12 @@ DEFAULT_RETRY_TIMER_DURATION = 5
 
 NUMBER_KEYS = (pg.window.key._1, pg.window.key._2, pg.window.key._3, pg.window.key._4, pg.window.key._5,
                pg.window.key._6, pg.window.key._7, pg.window.key._8, pg.window.key._9)
+
+COLOR_RED = "#F04E23"
+COLOR_GREEN = "#A2D45E"
+COLOR_BLUE = "#00A19B"
+COLOR_YELLOW = "#F3BD48"
+COLOR_PURPLE = "#5B315E"
 
 # Callbacks
 ###########
@@ -180,9 +186,9 @@ class ControlWindow(pg.window.Window):
 
         #self.playlist_label = pg.text.decode_attributed("Playlist")
 
-        self.info_label = pg.text.Label("Info",
-                                         font_name=CONTROL_WINDOW_FONT,
-                                         font_size=CONTROL_WINDOW_FONT_SIZE,
+        self.info_label = pg.text.HTMLLabel("Info",
+                                         #font_name=CONTROL_WINDOW_FONT,
+                                         #font_size=CONTROL_WINDOW_FONT_SIZE,
                                          anchor_x="left",
                                          anchor_y="bottom",
                                          x=CONTROL_WINDOW_PADDING,
@@ -255,23 +261,26 @@ class ControlWindow(pg.window.Window):
 
         info_label_string = ""
 
-        info_label_string += f"Piste : {state.track_number+1}/{len(state.tracks)}\n"
-        info_label_string += f"Pitch : {state.pitch}\n"
+        info_label_string += f"Piste : {state.track_number+1}/{len(state.tracks)}<br>"
+        info_label_string += f"Pitch : {state.pitch}<br>"
         if state.player:
             elapsed_seconds = int(state.player.time)
             elapsed_minsec = f"{(elapsed_seconds // 60):02}:{(elapsed_seconds % 60):02}"
             total_seconds = int(state.get_track().media.duration)
             total_minsec = f"{(total_seconds // 60):02}:{(total_seconds % 60):02}"
-            info_label_string += f"{elapsed_minsec:} / {total_minsec}\n"
+            info_label_string += f"{elapsed_minsec:} / {total_minsec}<br>"
         else:
-            info_label_string += "- / -\n"
+            info_label_string += "- / -<br>"
 
         if state.gifs:
-            info_label_string += f"GIF : {state.gifs[0]['name']} ({'visible' if state.gif_visible else 'caché'})\n"
+            info_label_string += f"GIF : {state.gifs[0]['name']} ({'visible' if state.gif_visible else 'caché'})<br>"
         else:
-            info_label_string += "GIF : aucun\n"
+            info_label_string += "GIF : aucun<br>"
 
-        info_label_string += ("Prêt", "Lecture", "Réponse", "Révélation")[state.step]
+        info_label_string += (f"<font color='{COLOR_YELLOW}'>Prêt</font>",
+                              f"<font color='{COLOR_GREEN}'>Lecture</font>",
+                              f"<font color='{COLOR_RED}'>Réponse</font>",
+                              f"<font color='{COLOR_BLUE}'>Révélation</font>")[state.step]
         
         if state.step == STEP_ANSWERING:
             info_label_string += f" ({state.last_team_to_buzz.name})"
@@ -283,7 +292,7 @@ class ControlWindow(pg.window.Window):
                 state.timer_running = True
                 pg.clock.schedule_interval(reduce_answer_timer, 0.01)
 
-        self.info_label.text = info_label_string
+        self.info_label.text = f"<font color='#ffffff' face='Droid Sans Mono'>{info_label_string}</font>"
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
