@@ -265,7 +265,11 @@ class ControlWindow(pg.window.Window):
             else:
                 mark_title = " "
             line = f"{track.artist} - {track.title}"
-            line = line[:39] if track != state.selected_track else line[-39:]
+            if len(line) > 39:
+                if track != state.selected_track:
+                    line = line[:38]+"\u2026"
+                else:
+                    line = "\u2026"+line[-38:]
             line = f"[{mark_artist}][{mark_title}] {line}"
             line = f"<font color='{color}'>{line}</font>"
             playlist_label_string += f"{line}<br>"
