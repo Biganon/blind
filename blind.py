@@ -197,17 +197,6 @@ class ControlWindow(pg.window.Window):
                                          multiline=True,
                                          width=2000)
 
-        self.scores_label = pg.text.HTMLLabel("Scores",
-                                          #font_name=CONTROL_WINDOW_FONT,
-                                          #font_size=CONTROL_WINDOW_FONT_SIZE,
-                                          multiline=True,
-                                          width=500,
-                                          #align="right",
-                                          x=CONTROL_WINDOW_WIDTH-CONTROL_WINDOW_PADDING,
-                                          y=CONTROL_WINDOW_PADDING,
-                                          anchor_x="right",
-                                          anchor_y="bottom") 
-
         self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-4,
                                                  CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-4,
                                                  TIMER_BAR_WIDTH+4,
@@ -261,6 +250,13 @@ class ControlWindow(pg.window.Window):
         self.playlist_label.text = f"<font face='Droid Sans Mono'>{playlist_label_string}</font>"
 
         info_label_string = ""
+        max_name_length = max(len(f"{team.name} ({team.number})") for team in state.teams)
+        for team in state.teams:
+            name_length = len(f"{team.name} ({team.number})")
+            print(name_length)
+            info_label_string += f"{team.name} ({team.number}){' '*(max_name_length-name_length)} : {team.score}<br>"
+
+        info_label_string += "<br>"
 
         info_label_string += f"Piste : {state.track_number+1}/{len(state.tracks)}<br>"
         info_label_string += f"Pitch : {state.pitch}<br>"
@@ -293,7 +289,7 @@ class ControlWindow(pg.window.Window):
                 state.timer_running = True
                 pg.clock.schedule_interval(reduce_answer_timer, 0.01)
 
-        self.info_label.text = f"<font color='{COLOR_WHITE}' face='Droid Sans Mono'>{info_label_string}</font>"
+        self.info_label.text = f"<pre><font color='{COLOR_WHITE}' face='Droid Sans Mono'>{info_label_string}</font></pre>"
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
 
@@ -306,15 +302,8 @@ class ControlWindow(pg.window.Window):
                 state.player.volume = 1
             # pg.clock.unschedule(reduce_answer_timer) # Décommenter pour mettre le timer en pause lorsque tout trouvé
 
-        scores_string = ""
-        for team in state.teams:
-            scores_string += f"{team.name} ({team.number}) : {str(team.score).rjust(3)}<br>"
-        scores_string = scores_string[:-4]
-        self.scores_label.text = f"<font color='{COLOR_WHITE}' face='Droid Sans Mono'>{scores_string}</font>"
-
         self.playlist_label.draw()
         self.info_label.draw()
-        self.scores_label.draw()
         self.timer_outline.draw()
         self.timer_inside.draw()
         self.timer_bar.draw()
