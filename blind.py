@@ -32,8 +32,12 @@ RETRY_MODE_TIMER = 2
 CONTROL_WINDOW_WIDTH = 1200
 CONTROL_WINDOW_HEIGHT = 900
 CONTROL_WINDOW_PADDING = 20
-TIMER_BAR_WIDTH = 200
-TIMER_BAR_HEIGHT = 40
+TIMER_OUTLINE_WIDTH = CONTROL_WINDOW_WIDTH - 2*CONTROL_WINDOW_PADDING
+TIMER_OUTLINE_HEIGHT = 30
+TIMER_GAP_WIDTH = TIMER_OUTLINE_WIDTH - 2
+TIMER_GAP_HEIGHT = TIMER_OUTLINE_HEIGHT - 2
+TIMER_BAR_WIDTH = TIMER_GAP_WIDTH - 2
+TIMER_BAR_HEIGHT = TIMER_GAP_HEIGHT - 2
 DISPLAY_WINDOW_WIDTH = 1200
 DISPLAY_WINDOW_HEIGHT = 900
 
@@ -198,18 +202,18 @@ class ControlWindow(pg.window.Window):
                                          multiline=True,
                                          width=CONTROL_WINDOW_WIDTH-2*CONTROL_WINDOW_PADDING)
 
-        self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-4,
-                                                 CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-4,
-                                                 TIMER_BAR_WIDTH+4,
-                                                 TIMER_BAR_HEIGHT+4,
+        self.timer_outline = pg.shapes.Rectangle(CONTROL_WINDOW_PADDING,
+                                                 CONTROL_WINDOW_HEIGHT-TIMER_OUTLINE_HEIGHT-CONTROL_WINDOW_PADDING,
+                                                 TIMER_OUTLINE_WIDTH,
+                                                 TIMER_OUTLINE_HEIGHT,
                                                  color=(255, 255, 255))
-        self.timer_inside = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-3,
-                                                CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-3,
-                                                TIMER_BAR_WIDTH+2,
-                                                TIMER_BAR_HEIGHT+2,
+        self.timer_gap = pg.shapes.Rectangle(CONTROL_WINDOW_PADDING+1,
+                                                CONTROL_WINDOW_HEIGHT-TIMER_OUTLINE_HEIGHT-CONTROL_WINDOW_PADDING+1,
+                                                TIMER_GAP_WIDTH,
+                                                TIMER_GAP_HEIGHT,
                                                 color=(0, 0, 0))
-        self.timer_bar = pg.shapes.Rectangle(CONTROL_WINDOW_WIDTH-TIMER_BAR_WIDTH-CONTROL_WINDOW_PADDING-2,
-                                             CONTROL_WINDOW_HEIGHT-TIMER_BAR_HEIGHT-CONTROL_WINDOW_PADDING-2,
+        self.timer_bar = pg.shapes.Rectangle(CONTROL_WINDOW_PADDING+2,
+                                             CONTROL_WINDOW_HEIGHT-TIMER_OUTLINE_HEIGHT-CONTROL_WINDOW_PADDING+2,
                                              TIMER_BAR_WIDTH,
                                              TIMER_BAR_HEIGHT,
                                              color=(255, 255, 255))
@@ -302,6 +306,7 @@ class ControlWindow(pg.window.Window):
         self.info_label.text = f"<pre><font color='{COLOR_WHITE}' face='Droid Sans Mono'>{info_label_string}</font></pre>"
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
+        # self.timer_bar.color = hex_to_rgb((COLOR_YELLOW, COLOR_RED)[state.step == STEP_ANSWERING])
 
         if state.selected_track.title_revealed and state.selected_track.artist_revealed and state.step == STEP_ANSWERING:
 
@@ -314,7 +319,7 @@ class ControlWindow(pg.window.Window):
         self.playlist_label.draw()
         self.info_label.draw()
         self.timer_outline.draw()
-        self.timer_inside.draw()
+        self.timer_gap.draw()
         self.timer_bar.draw()
 
     def on_activate(self):
