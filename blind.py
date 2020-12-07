@@ -618,7 +618,7 @@ class DisplayWindow(pg.window.Window):
 
         self.answering_team_label.x = width*0.5
         self.answering_team_label.y = height*0.8
-        self.answering_team_label.font_size = height//15
+        self.answering_team_label.font_size = height//8
         self.answering_team_label.width = width*0.5
 
         super(DisplayWindow, self).on_resize(width, height) # https://stackoverflow.com/a/23276270/602339
