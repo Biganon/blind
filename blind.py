@@ -594,8 +594,9 @@ class DisplayWindow(pg.window.Window):
             self.leaderboard_label.draw()
 
         if state.gifs and state.gif_visible:
+            state.gifs[0]["sprite"].scale *= ((self.width/3) / state.gifs[0]["sprite"].width)
             state.gifs[0]["sprite"].y = 0
-            state.gifs[0]["sprite"].x = self.width - state.gifs[0]["sprite"].width
+            state.gifs[0]["sprite"].x = self.width - state.gifs[0]["sprite"].width - self.width//20
             state.gifs[0]["sprite"].draw()
 
     def on_resize(self, width, height):
