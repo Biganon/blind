@@ -831,6 +831,8 @@ def play(playlist_file,
     state.pause_during_answers = pause_during_answers
     state.fadeout_factor = fadeout_factor
 
+    _ = state.joystick # Simple accès au joystick, pour l'initialiser et échouer s'il est absent 
+
     with open(teams_file, "r") as f:
         lines = f.read().splitlines()
 
