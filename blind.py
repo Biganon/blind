@@ -866,7 +866,7 @@ def play(playlist_file,
         cover = pg.image.load(os.path.join(COVERS_DIR, f"{line}.jpg")).get_texture()
         track = Track(artist, title, media, cover)
         state.tracks.append(track)
-        print(f"Piste {str(idx+1)}/{len(lines)} chargée ({artist} - {title})")
+        print(f"Piste {str(idx+1)}/{len(lines)} chargée ({line})")
 
     buzzer_fx = pg.media.load(os.path.join(FX_DIR, BUZZER_FX), streaming=False)
 
