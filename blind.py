@@ -356,7 +356,7 @@ class ControlWindow(pg.window.Window):
 
     def on_key_press(self, symbol, modifiers):
         if symbol == pg.window.key.ENTER:
-            if state.step == STEP_IDLE:
+            if not state.player:
                 state.step = STEP_PLAYING
                 state.player = state.selected_track.media.play()
                 state.player.pitch = float(state.pitch)
@@ -381,6 +381,7 @@ class ControlWindow(pg.window.Window):
         elif symbol == pg.window.key.R:
             state.selected_track.artist_revealed = True
             state.selected_track.title_revealed = True
+            state.step = STEP_REVEALED
             state.display_window.dispatch_event("on_draw")
         elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.selected_track.title_revealed:
             state.last_team_to_buzz.score += 1
@@ -434,9 +435,9 @@ class ControlWindow(pg.window.Window):
                 state.player.pitch = float(state.pitch)
 
     def on_text_motion(self, motion):
-        if motion == pg.window.key.MOTION_UP and state.step == STEP_IDLE:
+        if motion == pg.window.key.MOTION_UP and not state.player:
             state.shift_selected_track(-1)
-        elif motion == pg.window.key.MOTION_DOWN and state.step == STEP_IDLE:
+        elif motion == pg.window.key.MOTION_DOWN and not state.player:
             state.shift_selected_track(1)
         elif motion == pg.window.key.MOTION_RIGHT and state.player:
             state.player.seek(state.player.time + 1)
