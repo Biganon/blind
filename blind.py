@@ -3,7 +3,6 @@ import coverpy
 import os
 import pyglet as pg
 import random
-import re
 import requests
 import subprocess
 import sys
