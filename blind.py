@@ -337,10 +337,7 @@ class ControlWindow(pg.window.Window):
         if state.selected_track.title_revealed and state.selected_track.artist_revealed and state.step == STEP_ANSWERING:
 
             state.step = STEP_REVEALED
-            if state.pause_during_answers:
-                state.player.play()
-            else:
-                state.player.volume = 1
+            state.toggle_pause()
 
         self.playlist_label.draw()
         self.info_label.draw()
@@ -369,10 +366,7 @@ class ControlWindow(pg.window.Window):
                     reset_track()
             elif state.step == STEP_ANSWERING:
                 state.step = STEP_PLAYING
-                if state.pause_during_answers:
-                    state.player.play()
-                else:
-                    state.player.volume = 1
+                state.toggle_pause()
                 if state.retry_mode == RETRY_MODE_TIMER:
                     pg.clock.schedule_once(restore_buzzer, state.retry_timer_duration, team=state.last_team_to_buzz)
                 reset_answer_timer()
@@ -718,6 +712,18 @@ class State:
             return
         self.gifs.rotate(offset)
 
+    def toggle_pause(self):
+        if self.pause_during_answers:
+            if self.player.playing:
+                self.player.pause()
+            else:
+                self.player.play()
+        else:
+            if self.player.volume == 1:
+                self.player.volume = 0.1
+            else:
+                self.player.volume = 1                
+
 class Team:
     def __init__(self, name="NAME", score=0, button_id=0):
         self.name = name
@@ -899,10 +905,7 @@ def play(playlist_file,
                 return
             buzzer_fx.play()
             state.step = STEP_ANSWERING
-            if state.pause_during_answers:
-                state.player.pause()
-            else:
-                state.player.volume = 0.1
+            state.toggle_pause()
             if state.retry_mode == RETRY_MODE_ALTERNATING:
                 for team in state.teams:
                     team.can_buzz = True
