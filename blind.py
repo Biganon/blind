@@ -72,46 +72,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # utile pour créer des li
 MAX_PLAYLIST_ENTRIES = 23
 PLAYLIST_BUFFER_LINES = 4
 
-# Callbacks
-###########
-
-def make_quieter(dt):
-    if state.player.volume > 0.01:
-        state.player.volume *= state.fadeout_factor
-        return
-
-    state.player.pause()
-    state.player = None
-    state.step = STEP_IDLE
-    pg.clock.unschedule(make_quieter)
-    for team in state.teams:
-        team.can_buzz = True
-    reset_answer_timer()
-
-def reduce_answer_timer(dt):
-    unit = dt / state.answer_timer_duration
-
-    if state.timer > unit:
-        state.timer -= unit
-        return
-
-    state.timer = 0
-
-    pg.clock.unschedule(reduce_answer_timer)
-
-def restore_buzzer(dt, team):
-    team.can_buzz = True
-
 # Fonctions utilitaires
-#######################
-
-def reset_answer_timer():
-    state.timer = 1
-    state.timer_running = False
-    pg.clock.unschedule(reduce_answer_timer)
-
-def reset_track():
-    pg.clock.schedule_interval(make_quieter, 0.1)
 
 def download_audio(track=None, video_id=None):
     output_file = os.path.join(TRACKS_DIR, f"{track}.mp3")
@@ -327,7 +288,7 @@ class ControlWindow(pg.window.Window):
                                         # le callback, or le callback n'est pas appelé à t=0, mais à t=0.01,
                                         # donc dans l'intervalle on_draw() peut s'exécuter plusieurs fois.
                 state.timer_running = True
-                pg.clock.schedule_interval(reduce_answer_timer, 0.01)
+                pg.clock.schedule_interval(state.reduce_answer_timer, 0.01)
 
         self.info_label.text = f"<pre><font color='{COLOR_WHITE}' face='{CONTROL_WINDOW_FONT}'>{info_label_string}</font></pre>"
 
@@ -363,15 +324,15 @@ class ControlWindow(pg.window.Window):
                     state.player.seek(random_second)
 
             elif state.step == STEP_PLAYING:
-                    reset_track()
+                    state.reset_track()
             elif state.step == STEP_ANSWERING:
                 state.step = STEP_PLAYING
                 state.toggle_pause()
                 if state.retry_mode == RETRY_MODE_TIMER:
-                    pg.clock.schedule_once(restore_buzzer, state.retry_timer_duration, team=state.last_team_to_buzz)
-                reset_answer_timer()
+                    pg.clock.schedule_once(state.restore_buzzer, state.retry_timer_duration, team=state.last_team_to_buzz)
+                state.reset_answer_timer()
             elif state.step == STEP_REVEALED:
-                reset_track()
+                state.reset_track()
         elif symbol == pg.window.key.R:
             state.selected_track.artist_revealed = True
             state.selected_track.title_revealed = True
@@ -722,7 +683,42 @@ class State:
             if self.player.volume == 1:
                 self.player.volume = 0.1
             else:
-                self.player.volume = 1                
+                self.player.volume = 1
+
+    def make_quieter(self, dt):
+        if self.player.volume > 0.01:
+            self.player.volume *= self.fadeout_factor
+            return
+
+        self.player.pause()
+        self.player = None
+        self.step = STEP_IDLE
+        pg.clock.unschedule(self.make_quieter)
+        for team in self.teams:
+            team.can_buzz = True
+        self.reset_answer_timer()
+
+    def reduce_answer_timer(self, dt):
+        unit = dt / self.answer_timer_duration
+
+        if self.timer > unit:
+            self.timer -= unit
+            return
+
+        self.timer = 0
+
+        pg.clock.unschedule(self.reduce_answer_timer)
+
+    def restore_buzzer(self, dt, team):
+        team.can_buzz = True
+
+    def reset_answer_timer(self):
+        self.timer = 1
+        self.timer_running = False
+        pg.clock.unschedule(self.reduce_answer_timer)
+
+    def reset_track(self):
+        pg.clock.schedule_interval(self.make_quieter, 0.1)
 
 class Team:
     def __init__(self, name="NAME", score=0, button_id=0):
