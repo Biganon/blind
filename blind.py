@@ -113,17 +113,14 @@ def reset_answer_timer():
 def reset_track():
     pg.clock.schedule_interval(make_quieter, 0.1)
 
-def download_audio(string=None, video_id=None, output_file=None):
-    if string and video_id:
-        print("Fournir une chaîne de recherche ou un id de vidéo, pas les deux.")
-        return
-    if string:
-        query = f"ytsearch:{string}"
-        output_file = os.path.join(TRACKS_DIR, f"{string}.mp3")
+def download_audio(track=None, video_id=None):
+    output_file = os.path.join(TRACKS_DIR, f"{track}.mp3")
+
+    if not video_id:
+        query = f"ytsearch:{track}"
     else:
         query = f"https://www.youtube.com/watch?v={video_id}"
-        if not output_file:
-            output_file = os.path.join(TRACKS_DIR, f"manual_download_{video_id}.mp3")
+
     ydl_opts = {"outtmpl": r"temp_audio.%(ext)s",
                 "quiet": True,
                 "format": "bestaudio/best",
@@ -135,6 +132,8 @@ def download_audio(string=None, video_id=None, output_file=None):
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download([query])
 
+    print("Son téléchargé.")
+
     subprocess.run(["sox", 
                     "temp_audio.mp3",
                     output_file,
@@ -142,6 +141,8 @@ def download_audio(string=None, video_id=None, output_file=None):
                     "1",
                     "0.1",
                     "0.1%"])
+
+    print("Silences supprimés.")
 
     os.remove("temp_audio.mp3")
 
@@ -158,8 +159,10 @@ def download_cover(track):
                 f.write(response.content)
 
         os.rename(temp_cover_file, os.path.join(COVERS_DIR, f"{track}.jpg"))
+        print("Couverture téléchargée.")
     except coverpy.exceptions.NoResultsException:
         os.symlink(os.path.join(BASE_DIR, IMAGES_DIR, NOCOVER_IMAGE), os.path.join(COVERS_DIR, f"{track}.jpg"))
+        print("Couverture introuvable, lien symbolique créé vers couverture générique.")
 
 def hex_to_rgb(h):
     r, g, b = h[1:3], h[3:5], h[5:7]
@@ -741,23 +744,23 @@ def cli():
 
 @cli.command()
 @click.option("--playlist-file", type=click.Path(exists=True), default="playlist.txt", help="Playlist file.")
-@click.option("--video-id", type=str, help="YouTube video ID (download and process one video only).")
-@click.option("--output-file", type=click.Path(), help="Output file (used only with --video-id).")
-def download(playlist_file, video_id, output_file):
+def download(playlist_file):
     """Download songs and cover pictures."""
-    if video_id:
-        download_audio(video_id=video_id, output_file=output_file)
-        print("Piste téléchargée")
-        return
     with open(playlist_file, "r") as f:
-        tracks = f.read().splitlines()
+        lines = f.read().splitlines()
 
-    for track in tracks:
+    for line in lines:
+        line = line.strip()
+        if "=" in line:
+            track, video_id = line.split("=")
+        else:
+            track = line
+            video_id = None
 
-        print(f"Démarre '{track}'...")
+        print(f"Démarre '{track}' ({video_id if video_id else 'pas de video_id'})...")
 
         if not os.path.isfile(os.path.join(TRACKS_DIR, f"{track}.mp3")):
-            download_audio(string=track)
+            download_audio(track=track, video_id=video_id)
         else:
             print(f"Le fichier audio existe déjà, ignore.")
 
@@ -853,7 +856,11 @@ def play(playlist_file,
         lines = f.read().splitlines()
 
     for idx, line in enumerate(lines):
+        if "=" in line:
+            line = line.split("=")[0]
         artist, title = line.split(" - ")
+        if "/" in artist:
+            artist = artist.split("/")[-1]
         media = pg.media.load(os.path.join(TRACKS_DIR, f"{line}.mp3"), streaming=False)
         cover = pg.image.load(os.path.join(COVERS_DIR, f"{line}.jpg")).get_texture()
         track = Track(artist, title, media, cover)
