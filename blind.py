@@ -20,7 +20,6 @@ DISPLAY_WINDOW_FONT = "Kenyan Coffee"
 STEP_IDLE = 0
 STEP_PLAYING = 1
 STEP_ANSWERING = 2
-STEP_REVEALED = 3
 
 RETRY_MODE_STRICT = 0
 RETRY_MODE_ALTERNATING = 1
@@ -276,8 +275,7 @@ class ControlWindow(pg.window.Window):
 
         info_label_string += (f"<font color='{COLOR_YELLOW}'>Prêt</font>",
                               f"<font color='{COLOR_GREEN}'>Lecture</font>",
-                              f"<font color='{COLOR_RED}'>Réponse</font>",
-                              f"<font color='{COLOR_BLUE}'>Révélation</font>")[state.step]
+                              f"<font color='{COLOR_RED}'>Réponse</font>")[state.step]
         
         if state.step == STEP_ANSWERING:
             info_label_string += f" ({state.last_team_to_buzz.name})"
@@ -295,8 +293,7 @@ class ControlWindow(pg.window.Window):
         # self.timer_bar.color = hex_to_rgb((COLOR_YELLOW, COLOR_RED)[state.step == STEP_ANSWERING])
 
         if state.selected_track.title_revealed and state.selected_track.artist_revealed and state.step == STEP_ANSWERING:
-
-            state.step = STEP_REVEALED
+            state.step = STEP_PLAYING
             state.toggle_pause()
 
         self.playlist_label.draw()
@@ -330,12 +327,9 @@ class ControlWindow(pg.window.Window):
                 if state.retry_mode == RETRY_MODE_TIMER:
                     pg.clock.schedule_once(state.restore_buzzer, state.retry_timer_duration, team=state.last_team_to_buzz)
                 state.reset_answer_timer()
-            elif state.step == STEP_REVEALED:
-                state.reset_track()
         elif symbol == pg.window.key.R:
             state.selected_track.artist_revealed = True
             state.selected_track.title_revealed = True
-            state.step = STEP_REVEALED
             state.display_window.dispatch_event("on_draw")
         elif symbol == pg.window.key.T and state.step == STEP_ANSWERING and not state.selected_track.title_revealed:
             state.last_team_to_buzz.score += 1
