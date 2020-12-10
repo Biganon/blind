@@ -891,6 +891,8 @@ def play(playlist_file,
 
     @state.joystick.event
     def on_joybutton_press(joystick, button_id):
+        if state.selected_track.artist_revealed and state.selected_track.title_revealed:
+            return
 
         if state.step == STEP_PLAYING:
             if not (team_trying_to_buzz := state.get_team_by_button_id(button_id)):
