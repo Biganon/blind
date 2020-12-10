@@ -320,7 +320,7 @@ class ControlWindow(pg.window.Window):
                     state.player.seek(random_second)
 
             elif state.step == STEP_PLAYING:
-                    state.reset_track()
+                state.reset_track()
             elif state.step == STEP_ANSWERING:
                 state.step = STEP_PLAYING
                 state.toggle_pause()
