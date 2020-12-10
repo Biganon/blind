@@ -44,6 +44,7 @@ SUCCESS_FX = "success4.wav"
 NEUTRAL_IMAGE = "thinking2.png"
 BACKGROUND_IMAGE = "background1.png"
 BUZZER_IMAGE = "emergency2.png"
+NOCOVER_IMAGE = "nocover.jpg"
 
 DEFAULT_FADEOUT_FACTOR = 0.8
 DEFAULT_ANSWER_TIMER_DURATION = 3
@@ -60,12 +61,13 @@ COLOR_YELLOW = "#F3BD48"
 COLOR_PURPLE = "#5B315E"
 COLOR_WHITE = "#FFFFFF"
 
-ASSETS_DIR = "assets"
+ASSETS_DIR = "assets" # pyglet ne supporte pas les chemins absolus
 COVERS_DIR = "covers"
 TRACKS_DIR = "tracks"
 FX_DIR = os.path.join(ASSETS_DIR, "fx")
 GIFS_DIR = os.path.join(ASSETS_DIR, "gifs")
 IMAGES_DIR = os.path.join(ASSETS_DIR, "images")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # utile pour créer des liens symboliques
 
 MAX_PLAYLIST_ENTRIES = 23
 PLAYLIST_BUFFER_LINES = 4
@@ -117,11 +119,11 @@ def download_audio(string=None, video_id=None, output_file=None):
         return
     if string:
         query = f"ytsearch:{string}"
-        output_file = os.path.join("tracks", f"{string}.mp3")
+        output_file = os.path.join(TRACKS_DIR, f"{string}.mp3")
     else:
         query = f"https://www.youtube.com/watch?v={video_id}"
         if not output_file:
-            output_file = os.path.join("tracks", f"manual_download_{video_id}.mp3")
+            output_file = os.path.join(TRACKS_DIR, f"manual_download_{video_id}.mp3")
     ydl_opts = {"outtmpl": r"temp_audio.%(ext)s",
                 "quiet": True,
                 "format": "bestaudio/best",
@@ -147,15 +149,17 @@ def download_cover(track):
     temp_cover_file = "temp_cover.jpg"
 
     cp = coverpy.CoverPy()
-    cover = cp.get_cover(track)
-    cover_url = cover.artwork(800)
+    try:
+        cover = cp.get_cover(track)
+        cover_url = cover.artwork(800)
+        response = requests.get(cover_url)
+        if response.status_code == 200:
+            with open(temp_cover_file, "wb") as f:
+                f.write(response.content)
 
-    response = requests.get(cover_url)
-    if response.status_code == 200:
-        with open(temp_cover_file, "wb") as f:
-            f.write(response.content)
-
-    os.rename(temp_cover_file, os.path.join("covers", f"{track}.jpg"))
+        os.rename(temp_cover_file, os.path.join(COVERS_DIR, f"{track}.jpg"))
+    except coverpy.exceptions.NoResultsException:
+        os.symlink(os.path.join(BASE_DIR, IMAGES_DIR, NOCOVER_IMAGE), os.path.join(COVERS_DIR, f"{track}.jpg"))
 
 def hex_to_rgb(h):
     r, g, b = h[1:3], h[3:5], h[5:7]
@@ -752,12 +756,12 @@ def download(playlist_file, video_id, output_file):
 
         print(f"Démarre '{track}'...")
 
-        if not os.path.isfile(os.path.join("tracks", f"{track}.mp3")):
+        if not os.path.isfile(os.path.join(TRACKS_DIR, f"{track}.mp3")):
             download_audio(string=track)
         else:
             print(f"Le fichier audio existe déjà, ignore.")
 
-        if not os.path.isfile(os.path.join("covers", f"{track}.jpg")):
+        if not os.path.isfile(os.path.join(COVERS_DIR, f"{track}.jpg")):
             download_cover(track)
         else:
             print(f"La pochette existe déjà, ignore.")
@@ -850,8 +854,8 @@ def play(playlist_file,
 
     for idx, line in enumerate(lines):
         artist, title = line.split(" - ")
-        media = pg.media.load(os.path.join("tracks", f"{line}.mp3"), streaming=False)
-        cover = pg.image.load(os.path.join("covers", f"{line}.jpg")).get_texture()
+        media = pg.media.load(os.path.join(TRACKS_DIR, f"{line}.mp3"), streaming=False)
+        cover = pg.image.load(os.path.join(COVERS_DIR, f"{line}.jpg")).get_texture()
         track = Track(artist, title, media, cover)
         state.tracks.append(track)
         print(f"Piste {str(idx+1)}/{len(lines)} chargée ({artist} - {title})")
