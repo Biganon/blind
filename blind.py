@@ -845,6 +845,7 @@ def play(playlist_file,
         lines = f.read().splitlines()
 
     for line in lines:
+        line = line.strip()
         fields = line.split(":")
         name, button_id = fields[0], int(fields[1])
         if len(fields) == 3:
@@ -857,6 +858,7 @@ def play(playlist_file,
         lines = f.read().splitlines()
 
     for idx, line in enumerate(lines):
+        line = line.strip()
         if "=" in line:
             line = line.split("=")[0]
         artist, title = line.split(" - ")
