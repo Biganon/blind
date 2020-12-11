@@ -123,11 +123,6 @@ def download_cover(track):
         os.symlink(os.path.join(BASE_DIR, IMAGES_DIR, NOCOVER_IMAGE), os.path.join(COVERS_DIR, f"{track}.jpg"))
         print("Couverture introuvable, lien symbolique créé vers couverture générique.")
 
-def hex_to_rgb(h):
-    r, g, b = h[1:3], h[3:5], h[5:7]
-    r, g, b = map(lambda x:int(x, 16), (r, g, b))
-    return (r, g, b)
-
 # Classes de fenêtres
 #####################
 
@@ -290,7 +285,6 @@ class ControlWindow(pg.window.Window):
         self.info_label.text = f"<pre><font color='{COLOR_WHITE}' face='{CONTROL_WINDOW_FONT}'>{info_label_string}</font></pre>"
 
         self.timer_bar.width = state.timer * TIMER_BAR_WIDTH
-        # self.timer_bar.color = hex_to_rgb((COLOR_YELLOW, COLOR_RED)[state.step == STEP_ANSWERING])
 
         if state.selected_track.title_revealed and state.selected_track.artist_revealed and state.step == STEP_ANSWERING:
             state.step = STEP_PLAYING
